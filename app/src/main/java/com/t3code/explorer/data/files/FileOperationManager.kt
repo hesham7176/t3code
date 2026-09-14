@@ -99,6 +99,7 @@ class FileOperationManager(private val context: Context) {
             target.parentFile?.mkdirs()
             require(File(entry.deletedPath).renameTo(target)) { "Restore failed" }
             File(entry.deletedPath + ".meta").delete()
+            Unit
         }
     }
 

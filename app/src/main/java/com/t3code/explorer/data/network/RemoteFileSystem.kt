@@ -1,7 +1,6 @@
 package com.t3code.explorer.data.network
 
 import java.io.InputStream
-import kotlinx.coroutines.flow.Flow
 
 sealed interface NetworkConnection {
     val id: String
@@ -27,9 +26,9 @@ interface RemoteFileSystem {
 
 class UnsupportedRemoteFileSystem(override val connection: NetworkConnection) : RemoteFileSystem {
     private fun <T> unsupported(): Result<T> = Result.failure(UnsupportedOperationException("No network provider configured"))
-    override suspend fun list(path: String) = unsupported()
-    override suspend fun open(path: String) = unsupported()
-    override suspend fun upload(path: String, source: InputStream) = unsupported()
-    override suspend fun delete(path: String) = unsupported()
-    override suspend fun mkdir(path: String) = unsupported()
+    override suspend fun list(path: String): Result<List<RemoteEntry>> = unsupported()
+    override suspend fun open(path: String): Result<InputStream> = unsupported()
+    override suspend fun upload(path: String, source: InputStream): Result<Unit> = unsupported()
+    override suspend fun delete(path: String): Result<Unit> = unsupported()
+    override suspend fun mkdir(path: String): Result<Unit> = unsupported()
 }

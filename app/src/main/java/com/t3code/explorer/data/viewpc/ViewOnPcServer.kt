@@ -51,7 +51,13 @@ class ViewOnPcServer(private val root: File) {
     private suspend fun acceptLoop() = withContext(Dispatchers.IO) {
         while (socket?.isClosed == false) {
             try {
-                socket?.accept()?.let { client -> launch(executor) { serve(client) } }
+                val client = socket?.accept() ?: continue
+                val dispatcher = executor
+                if (dispatcher == null) {
+                    client.close()
+                    break
+                }
+                launch(dispatcher) { serve(client) }
             } catch (_: IOException) {
                 if (socket?.isClosed != true) continue
             }

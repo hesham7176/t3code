@@ -22,11 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.t3code.explorer.R
 import com.t3code.explorer.data.apps.ApplicationRepository
 import com.t3code.explorer.data.apps.InstalledApp
 import com.t3code.explorer.domain.util.readableFileSize
-import coil.compose.rememberDrawablePainter
 
 @Composable
 fun AppManagerScreen(padding: PaddingValues) {
@@ -36,7 +36,7 @@ fun AppManagerScreen(padding: PaddingValues) {
     LaunchedEffect(Unit) { apps = repository.list() }
     LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(12.dp)) {
         items(apps, key = { it.packageName }) { app ->
-            ListItem(headlineContent = { Text(app.label) }, supportingContent = { Text("${app.packageName} • ${app.versionName} • ${app.apkSize.readableFileSize()}") }, leadingContent = { Icon(rememberDrawablePainter(app.icon), app.label) }, modifier = Modifier.clickable { app.launchIntent?.let(context::startActivity) })
+            ListItem(headlineContent = { Text(app.label) }, supportingContent = { Text("${app.packageName} • ${app.versionName} • ${app.apkSize.readableFileSize()}") }, leadingContent = { AndroidView(factory = { android.widget.ImageView(it) }, update = { imageView -> imageView.setImageDrawable(app.icon) }) }, modifier = Modifier.clickable { app.launchIntent?.let(context::startActivity) })
         }
     }
 }

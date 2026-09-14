@@ -213,7 +213,7 @@ private fun Preview(item: FileItem, modifier: Modifier) {
     val context = LocalContext.current
     val app = context.applicationContext as com.t3code.explorer.ExplorerApplication
     val model = item.coverPath ?: if (!item.isDirectory && (item.mimeType.startsWith("image/") || item.mimeType.startsWith("video/"))) item.path else null
-    if (model != null) AsyncImage(model, item.name, modifier, imageLoader = app.thumbnailProvider.imageLoader, contentScale = ContentScale.Crop)
+    if (model != null) AsyncImage(model = model, contentDescription = item.name, imageLoader = app.thumbnailProvider.imageLoader, modifier = modifier, contentScale = ContentScale.Crop)
     else Icon(when {
         item.isDirectory -> Icons.Default.Folder
         item.mimeType.startsWith("video/") -> Icons.Default.Movie

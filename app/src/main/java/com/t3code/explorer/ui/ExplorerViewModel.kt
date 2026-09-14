@@ -43,7 +43,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             app.preferences.preferences.collect { preferences ->
                 _uiState.update { it.copy(preferences = preferences) }
-                if (preferences.language != "system" && AppCompatDelegate.applicationLocales.toLanguageTags() != preferences.language) AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(preferences.language))
+                if (preferences.language != "system" && AppCompatDelegate.getApplicationLocales().toLanguageTags() != preferences.language) AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(preferences.language))
                 loadDirectory(_uiState.value.currentPath)
             }
         }
