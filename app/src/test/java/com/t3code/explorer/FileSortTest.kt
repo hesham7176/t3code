@@ -18,6 +18,6 @@ class FileSortTest {
     }
 
     @Test fun `descending size is supported`() {
-        assertEquals(listOf(b, a, folder), listOf(folder, a, b).sortedBySpec(SortSpec(SortField.SIZE, SortDirection.DESCENDING)))
+        assertEquals(listOf(folder, b, a), listOf(folder, a, b).sortedBySpec(SortSpec(SortField.SIZE, SortDirection.DESCENDING)))
     }
 }

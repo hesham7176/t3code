@@ -6,7 +6,8 @@ import com.t3code.explorer.domain.model.SortField
 import com.t3code.explorer.domain.model.SortSpec
 
 fun List<FileItem>.sortedBySpec(spec: SortSpec): List<FileItem> {
-    val comparator = compareBy<FileItem> { !it.isDirectory }.thenComparator { left, right ->
+    val directoryFirst = compareBy<FileItem> { !it.isDirectory }
+    val fieldComparator = Comparator<FileItem> { left, right ->
         when (spec.field) {
             SortField.NAME -> left.name.lowercase().compareTo(right.name.lowercase())
             SortField.TYPE -> left.extension.compareTo(right.extension)
@@ -14,5 +15,6 @@ fun List<FileItem>.sortedBySpec(spec: SortSpec): List<FileItem> {
             SortField.MODIFIED -> left.modifiedAt.compareTo(right.modifiedAt)
         }
     }
-    return if (spec.direction == SortDirection.ASCENDING) sortedWith(comparator) else sortedWith(comparator.reversed())
+    val ordered = if (spec.direction == SortDirection.ASCENDING) fieldComparator else fieldComparator.reversed()
+    return sortedWith(directoryFirst.then(ordered))
 }

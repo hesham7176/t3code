@@ -12,7 +12,7 @@
 
 - JDK 17
 - Android SDK 35
-- Gradle 8.6 أو أحدث
+- Gradle 8.7 أو أحدث
 
 ```bash
 gradle assembleDebug

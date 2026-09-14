@@ -4,7 +4,7 @@
 
 - JDK 17
 - Android SDK Platform 35 وBuild Tools مناسبة
-- Gradle 8.6.1 أو Android Studio حديث
+- Gradle 8.7 أو Android Studio حديث
 
 ## الأوامر
 
