@@ -84,6 +84,16 @@
     <string name="choose_folder">Choose folder</string>
     <string name="file_created">File created</string>
     <string name="operation_failed">Operation failed</string>
+    <string name="folder_created">Folder created</string>
+    <string name="renamed">Renamed</string>
+    <string name="copied">Copied</string>
+    <string name="moved">Moved</string>
+    <string name="moved_to_recycle_bin">Moved to recycle bin</string>
+    <string name="restored">Restored</string>
+    <string name="recycle_bin_emptied">Recycle bin emptied</string>
+    <string name="saf_operation_unavailable">This operation is not available for the selected SAF location.</string>
+    <string name="saf_search_unavailable">Search is not available inside SAF locations yet.</string>
+    <string name="saf_permission_not_persisted">The storage permission could not be persisted; access may end when the app closes.</string>
     <string name="file_deleted">Moved to recycle bin</string>
     <string name="confirm_delete">Move selected items to the recycle bin?</string>
     <string name="new_folder_name">Folder name</string>

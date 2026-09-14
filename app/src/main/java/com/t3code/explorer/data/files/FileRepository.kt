@@ -42,9 +42,10 @@ class FileRepository(
             val found = ArrayList<FileItem>()
             start.walkTopDown()
                 .onEnter { directory -> !directory.isHidden || showHidden }
+                .takeWhile { found.size < 10_000 }
                 .forEach { file ->
                     coroutineContext.ensureActive()
-                    if (found.size >= 10_000 || (!showHidden && file.isHidden)) return@forEach
+                    if (!showHidden && file.isHidden) return@forEach
                     val item = toItem(file)
                     val queryMatches = filters.query.isBlank() || file.name.contains(filters.query, ignoreCase = true)
                     val categoryMatches = filters.category == null || FileType.category(file.name) == filters.category
@@ -59,7 +60,10 @@ class FileRepository(
 
     suspend fun listSafTree(treeUri: android.net.Uri, showHidden: Boolean = false): Result<List<FileItem>> = withContext(Dispatchers.IO) {
         runCatching {
-            val root = DocumentFile.fromTreeUri(context, treeUri) ?: error("Invalid storage URI")
+            val root = DocumentFile.fromTreeUri(context, treeUri)
+                ?: DocumentFile.fromSingleUri(context, treeUri)
+                ?: error("Invalid storage URI")
+            require(root.isDirectory) { "Selected SAF item is not a directory" }
             root.listFiles().asSequence()
                 .filter { showHidden || !it.name.orEmpty().startsWith('.') }
                 .map { document ->

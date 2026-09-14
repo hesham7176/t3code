@@ -8,6 +8,7 @@ import com.t3code.explorer.data.preferences.PreferencesRepository
 import com.t3code.explorer.data.storage.StorageRepository
 import com.t3code.explorer.media.MediaEngine
 import com.t3code.explorer.media.PlaybackPositionStore
+import com.t3code.explorer.media.ThumbnailProvider
 
 class ExplorerApplication : Application() {
     val preferences by lazy { PreferencesRepository(this) }
@@ -16,5 +17,6 @@ class ExplorerApplication : Application() {
     val operations by lazy { FileOperationManager(this) }
     val recycleBin by lazy { RecycleBinRepository(this) }
     val playbackPositions by lazy { PlaybackPositionStore(this) }
+    val thumbnailProvider by lazy { ThumbnailProvider(this) }
     val mediaEngine by lazy { MediaEngine(this) }
 }

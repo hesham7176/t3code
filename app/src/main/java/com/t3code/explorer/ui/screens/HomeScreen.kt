@@ -42,25 +42,26 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.t3code.explorer.R
+import com.t3code.explorer.domain.model.FileCategory
 import com.t3code.explorer.domain.model.StorageLocation
 import com.t3code.explorer.ui.ExplorerUiState
 import com.t3code.explorer.domain.util.readableFileSize
 
-private data class CategoryTile(val title: Int, val icon: ImageVector)
+private data class CategoryTile(val title: Int, val icon: ImageVector, val category: FileCategory)
 
 @Composable
 fun HomeScreen(
     state: ExplorerUiState,
     padding: PaddingValues,
-    onBrowse: () -> Unit,
+    onCategory: (FileCategory) -> Unit,
     onOpenPath: (String) -> Unit,
     onAnalyze: () -> Unit
 ) {
     val categories = listOf(
-        CategoryTile(R.string.images, Icons.Default.Image), CategoryTile(R.string.videos, Icons.Default.Movie),
-        CategoryTile(R.string.music, Icons.Default.AudioFile), CategoryTile(R.string.audio, Icons.Default.AudioFile),
-        CategoryTile(R.string.documents, Icons.Default.Description), CategoryTile(R.string.applications, Icons.Default.InstallMobile),
-        CategoryTile(R.string.archives, Icons.Default.Archive), CategoryTile(R.string.downloads, Icons.Default.Download)
+        CategoryTile(R.string.images, Icons.Default.Image, FileCategory.IMAGE), CategoryTile(R.string.videos, Icons.Default.Movie, FileCategory.VIDEO),
+        CategoryTile(R.string.music, Icons.Default.AudioFile, FileCategory.AUDIO), CategoryTile(R.string.audio, Icons.Default.AudioFile, FileCategory.AUDIO),
+        CategoryTile(R.string.documents, Icons.Default.Description, FileCategory.DOCUMENT), CategoryTile(R.string.applications, Icons.Default.InstallMobile, FileCategory.APK),
+        CategoryTile(R.string.archives, Icons.Default.Archive, FileCategory.ARCHIVE), CategoryTile(R.string.downloads, Icons.Default.Download, FileCategory.OTHER)
     )
     LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
@@ -73,7 +74,7 @@ fun HomeScreen(
             Spacer(Modifier.height(8.dp))
             LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(190.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), userScrollEnabled = false) {
                 items(categories) { tile ->
-                    Card(onClick = onBrowse, modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Card(onClick = { onCategory(tile.category) }, modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                         Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                             Icon(tile.icon, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.height(4.dp))

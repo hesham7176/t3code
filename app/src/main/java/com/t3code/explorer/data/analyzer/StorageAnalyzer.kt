@@ -26,7 +26,7 @@ class StorageAnalyzer {
                     categories[category] = categories.getValue(category) + size
                     if (files.size < 200) files += FileItem(file.name, file.path, isDirectory = false, size = size, modifiedAt = file.lastModified(), mimeType = FileType.mimeType(file.name), extension = FileType.extension(file.name))
                     var parent = file.parentFile
-                    while (parent != null && parent.path.startsWith(root.path)) {
+                    while (parent != null && (parent == root || parent.path.startsWith(root.path + File.separator))) {
                         directorySizes[parent] = (directorySizes[parent] ?: 0L) + size
                         if (parent == root) break
                         parent = parent.parentFile

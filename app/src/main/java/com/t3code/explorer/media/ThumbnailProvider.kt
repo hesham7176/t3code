@@ -13,7 +13,7 @@ import java.io.File
 
 /** Shared thumbnail loader with bounded memory and disk caches. */
 class ThumbnailProvider(private val context: Context) {
-    private val loader = ImageLoader.Builder(context)
+    val imageLoader: ImageLoader = ImageLoader.Builder(context)
         .memoryCache { MemoryCache.Builder(context).maxSizePercent(0.20).build() }
         .diskCache { DiskCache.Builder().directory(File(context.cacheDir, "thumbnails")).maxSizeBytes(128L * 1024 * 1024).build() }
         .components { add(VideoFrameDecoder.Factory()) }
@@ -29,6 +29,6 @@ class ThumbnailProvider(private val context: Context) {
 
     suspend fun imageDrawable(file: File) = runCatching {
         val request = ImageRequest.Builder(context).data(file).allowHardware(false).build()
-        (loader.execute(request) as? SuccessResult)?.drawable
+        (imageLoader.execute(request) as? SuccessResult)?.drawable
     }.getOrNull()
 }

@@ -84,11 +84,11 @@ class FileOperationManager(private val context: Context) {
             val bin = File(context.filesDir, "recycle-bin").apply { mkdirs() }
             items.forEach { item ->
                 val source = File(item.path)
-                if (!source.exists()) return@forEach
+                require(source.exists()) { "Source file is missing: ${item.path}" }
                 val target = conflictSafe(File(bin, "${System.currentTimeMillis()}_${UUID.randomUUID()}_${source.name}"))
                 val metadata = File(target.parentFile, "${target.name}.meta")
                 require(source.renameTo(target) || copyAndDelete(source, target)) { "Delete failed" }
-                metadata.writeText(item.path)
+                metadata.writeText(java.util.Base64.getEncoder().encodeToString(item.path.toByteArray(Charsets.UTF_8)))
             }
         }
     }
@@ -104,8 +104,8 @@ class FileOperationManager(private val context: Context) {
 
     fun shareIntent(item: FileItem): Intent? {
         val file = File(item.path)
-        if (!file.exists()) return null
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val uri = item.uri ?: FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        if (item.uri == null && !file.exists()) return null
         return Intent(Intent.ACTION_SEND).apply {
             type = item.mimeType
             putExtra(Intent.EXTRA_STREAM, uri)

@@ -210,8 +210,10 @@ private fun FileListRow(item: FileItem, selected: Boolean, details: Boolean, onO
 
 @Composable
 private fun Preview(item: FileItem, modifier: Modifier) {
+    val context = LocalContext.current
+    val app = context.applicationContext as com.t3code.explorer.ExplorerApplication
     val model = item.coverPath ?: if (!item.isDirectory && (item.mimeType.startsWith("image/") || item.mimeType.startsWith("video/"))) item.path else null
-    if (model != null) AsyncImage(model, item.name, modifier, contentScale = ContentScale.Crop)
+    if (model != null) AsyncImage(model, item.name, modifier, imageLoader = app.thumbnailProvider.imageLoader, contentScale = ContentScale.Crop)
     else Icon(when {
         item.isDirectory -> Icons.Default.Folder
         item.mimeType.startsWith("video/") -> Icons.Default.Movie
@@ -274,13 +276,34 @@ private fun PropertiesDialog(item: FileItem, onDismiss: () -> Unit) {
 @Composable
 private fun SortDialog(state: ExplorerUiState, onDismiss: () -> Unit, viewModel: ExplorerViewModel) {
     AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.sort)) }, text = {
-        Column { SortField.values().forEach { field -> Row(Modifier.fillMaxWidth().clickable { viewModel.setSort(field, state.preferences.sortDirection); onDismiss() }, verticalAlignment = Alignment.CenterVertically) { RadioButton(state.preferences.sortField == field, null); Text(field.name.lowercase().replaceFirstChar { it.uppercase() }) } }; Row(verticalAlignment = Alignment.CenterVertically) { TextButton({ viewModel.setSort(state.preferences.sortField, if (state.preferences.sortDirection == SortDirection.ASCENDING) SortDirection.DESCENDING else SortDirection.ASCENDING); onDismiss() }) { Text(if (state.preferences.sortDirection == SortDirection.ASCENDING) stringResource(R.string.descending) else stringResource(R.string.ascending)) } } }
+        Column { SortField.values().forEach { field -> Row(Modifier.fillMaxWidth().clickable { viewModel.setSort(field, state.preferences.sortDirection); onDismiss() }, verticalAlignment = Alignment.CenterVertically) { RadioButton(state.preferences.sortField == field, null); Text(sortLabel(field)) } }; Row(verticalAlignment = Alignment.CenterVertically) { TextButton({ viewModel.setSort(state.preferences.sortField, if (state.preferences.sortDirection == SortDirection.ASCENDING) SortDirection.DESCENDING else SortDirection.ASCENDING); onDismiss() }) { Text(if (state.preferences.sortDirection == SortDirection.ASCENDING) stringResource(R.string.descending) else stringResource(R.string.ascending)) } } }
     }, confirmButton = {})
 }
 
 @Composable
 private fun ViewDialog(current: ViewMode, onDismiss: () -> Unit, viewModel: ExplorerViewModel) {
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.view)) }, text = { Column { ViewMode.values().forEach { mode -> Row(Modifier.fillMaxWidth().clickable { viewModel.setViewMode(mode); onDismiss() }, verticalAlignment = Alignment.CenterVertically) { RadioButton(current == mode, null); Text(mode.name.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }) } } } }, confirmButton = {})
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.view)) }, text = { Column { ViewMode.values().forEach { mode -> Row(Modifier.fillMaxWidth().clickable { viewModel.setViewMode(mode); onDismiss() }, verticalAlignment = Alignment.CenterVertically) { RadioButton(current == mode, null); Text(viewLabel(mode)) } } } }, confirmButton = {})
 }
+
+@Composable
+private fun sortLabel(field: SortField): String = stringResource(when (field) {
+    SortField.NAME -> R.string.sort_by_name
+    SortField.TYPE -> R.string.sort_by_type
+    SortField.SIZE -> R.string.sort_by_size
+    SortField.MODIFIED -> R.string.sort_by_modified
+})
+
+@Composable
+private fun viewLabel(mode: ViewMode): String = stringResource(when (mode) {
+    ViewMode.SMALL_GRID -> R.string.small_grid
+    ViewMode.MEDIUM_GRID -> R.string.medium_grid
+    ViewMode.LARGE_GRID -> R.string.large_grid
+    ViewMode.SMALL_LIST -> R.string.small_list
+    ViewMode.MEDIUM_LIST -> R.string.medium_list
+    ViewMode.LARGE_LIST -> R.string.large_list
+    ViewMode.SMALL_DETAILS -> R.string.small_details
+    ViewMode.MEDIUM_DETAILS -> R.string.medium_details
+    ViewMode.LARGE_DETAILS -> R.string.large_details
+})
 
 private fun Modifier.horizontalScrollIfNeeded() = this

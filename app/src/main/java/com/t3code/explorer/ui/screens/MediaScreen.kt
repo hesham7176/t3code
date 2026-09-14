@@ -2,11 +2,16 @@ package com.t3code.explorer.ui.screens
 
 import android.app.Activity
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.media.AudioManager
 import android.net.Uri
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,6 +28,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,17 +42,22 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.consume
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
@@ -70,6 +81,23 @@ fun MediaScreen(state: ExplorerUiState, mediaPath: String, isVideo: Boolean, onB
     val uri = remember(mediaPath) { if (mediaPath.startsWith("content:")) Uri.parse(mediaPath) else Uri.fromFile(File(mediaPath)) }
     val isImage = FileType.isImage(mediaPath)
     val isAudio = FileType.isAudio(mediaPath)
+    var fullscreen by rememberSaveable(mediaPath) { mutableStateOf(false) }
+    val activity = context as? Activity
+    DisposableEffect(fullscreen, isVideo) {
+        activity?.let {
+            WindowCompat.setDecorFitsSystemWindows(it.window, !fullscreen)
+            val controller = WindowInsetsControllerCompat(it.window, it.window.decorView)
+            if (fullscreen) controller.hide(WindowInsetsCompat.Type.systemBars()) else controller.show(WindowInsetsCompat.Type.systemBars())
+            if (isVideo) it.requestedOrientation = if (fullscreen) ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        onDispose {
+            activity?.let {
+                WindowCompat.setDecorFitsSystemWindows(it.window, true)
+                WindowInsetsControllerCompat(it.window, it.window.decorView).show(WindowInsetsCompat.Type.systemBars())
+                if (isVideo) it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
+    }
     val queue = remember(state.items) { state.items.filter { !it.isDirectory && (it.mimeType.startsWith("video/") || it.mimeType.startsWith("audio/")) } }
     val scope = rememberCoroutineScope()
 
@@ -91,9 +119,9 @@ fun MediaScreen(state: ExplorerUiState, mediaPath: String, isVideo: Boolean, onB
     }
 
     Column(Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text(File(mediaPath).name) }, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } })
+        TopAppBar(title = { Text(File(mediaPath).name) }, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }, actions = { if (!isImage) IconButton({ fullscreen = !fullscreen }) { Icon(Icons.Default.Fullscreen, stringResource(R.string.full_screen)) } })
         when {
-            isImage -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { AsyncImage(uri, mediaPath, Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
+            isImage -> ImageGallery(state, mediaPath)
             isVideo -> Box(Modifier.fillMaxSize()) {
                 AndroidView({ PlayerView(it).apply { player = engine.exoPlayer; useController = true; keepScreenOn = true } }, Modifier.fillMaxSize())
                 VideoGestureOverlay(context, engine)
@@ -105,12 +133,49 @@ fun MediaScreen(state: ExplorerUiState, mediaPath: String, isVideo: Boolean, onB
 }
 
 @Composable
+private fun ImageGallery(state: ExplorerUiState, mediaPath: String) {
+    val images = remember(state.items, mediaPath) {
+        state.items.filter { !it.isDirectory && it.mimeType.startsWith("image/") }
+            .map { it.path }
+            .ifEmpty { listOf(mediaPath) }
+    }
+    val initialPage = images.indexOf(mediaPath).coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { images.size })
+    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+        val path = images[page]
+        val imageUri = if (path.startsWith("content:")) Uri.parse(path) else Uri.fromFile(File(path))
+        ZoomableImage(imageUri, path)
+    }
+}
+
+@Composable
+private fun ZoomableImage(uri: Uri, description: String) {
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        scale = (scale * zoomChange).coerceIn(1f, 5f)
+        offsetX += panChange.x
+        offsetY += panChange.y
+    }
+    Box(Modifier.fillMaxSize().transformable(transformState), contentAlignment = Alignment.Center) {
+        AsyncImage(uri, description, Modifier.fillMaxSize().graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+            translationX = offsetX
+            translationY = offsetY
+        }, contentScale = ContentScale.Fit)
+    }
+}
+
+@Composable
 private fun VideoGestureOverlay(context: Context, engine: com.t3code.explorer.media.MediaEngine) {
     val decider = remember { VideoGestureDecider() }
     var leftSide by remember { mutableStateOf(false) }
     var lockedAction by remember { mutableStateOf(GestureAction.NONE) }
     Box(
         Modifier.fillMaxSize()
+            .padding(bottom = 72.dp)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { engine.toggle() },

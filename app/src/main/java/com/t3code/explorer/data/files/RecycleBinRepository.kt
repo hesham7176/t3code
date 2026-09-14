@@ -17,5 +17,5 @@ class RecycleBinRepository(private val context: Context) {
             }?.sortedByDescending { it.deletedAt }?.toList().orEmpty()
     }
 
-    suspend fun empty(): Result<Unit> = withContext(Dispatchers.IO) { runCatching { File(context.filesDir, "recycle-bin").deleteRecursively() } }
+    suspend fun empty(): Result<Unit> = withContext(Dispatchers.IO) { runCatching { File(context.filesDir, "recycle-bin").deleteRecursively(); Unit } }
 }

@@ -88,7 +88,7 @@ fun ExplorerApp(viewModel: ExplorerViewModel) {
     ) { padding ->
         Box(Modifier.fillMaxSize()) {
             when (destination) {
-                Destination.HOME -> HomeScreen(state, padding, onBrowse = openBrowser, onOpenPath = { path -> viewModel.loadDirectory(path); destination = Destination.BROWSE }, onAnalyze = { destination = Destination.ANALYZER; viewModel.analyzeStorage() })
+                Destination.HOME -> HomeScreen(state, padding, onCategory = { category -> openBrowser(); viewModel.loadCategory(category) }, onOpenPath = { path -> openBrowser(); viewModel.loadDirectory(path); destination = Destination.BROWSE }, onAnalyze = { destination = Destination.ANALYZER; viewModel.analyzeStorage() })
                 Destination.BROWSE -> BrowserScreen(state, padding, viewModel, onOpenMedia = { item ->
                     if (FileType.isText(item.path)) {
                         textPath = item.path
