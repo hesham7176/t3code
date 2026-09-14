@@ -29,4 +29,4 @@
 
 ## التحقق
 
-التفاصيل الدقيقة في `TESTING.md` و`IMPLEMENTATION_STATUS.md`. آخر Build/Lint/Unit Test ناجح في CI هو run `34796549165`.
+التفاصيل الدقيقة في `TESTING.md` و`IMPLEMENTATION_STATUS.md`. آخر Build/Lint/Unit Test ناجح في CI هو run `34797004649`، وmetadata الـAPK في run `34797339729`.

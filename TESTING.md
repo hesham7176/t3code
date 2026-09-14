@@ -4,8 +4,9 @@
 
 تم تشغيل التحقق على GitHub Actions لأن بيئة Arena المحلية لا تحتوي Java أو Android SDK.
 
-- Run: `34796549165`
-- Commit: `1a4cf3ec0f181bc9f182b3e09954fdf52fcfe496`
+- Run النظيف: `34797004649`
+- Run metadata للـAPK: `34797339729`
+- كود التطبيق: `b334c82ed65aa323f9c3169140e18a0077156f4b`
 - JDK: Temurin `17.0.20.1`
 - Gradle: `8.7`
 - Android SDK: Platform `35` وBuild Tools `35.0.0`

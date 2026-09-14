@@ -10,7 +10,7 @@
 - `./gradlew lintDebug` — ناجح.
 - `./gradlew assembleDebug` — ناجح.
 - Gradle 8.7 وJDK 17.0.20.1 وAndroid SDK 35.
-- APK: `app/build/outputs/apk/debug/app-debug.apk`، حجمه 23,986,603 بايت في CI.
+- APK: `app/build/outputs/apk/debug/app-debug.apk`، حجمه 23,986,603 بايت في run metadata `34797339729`.
 
 هذا لا يعني اكتمال اختبار الجهاز؛ راجع `IMPLEMENTATION_STATUS.md` و`TESTING.md` للقيود الفعلية.
 

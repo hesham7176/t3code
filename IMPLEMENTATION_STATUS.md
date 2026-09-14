@@ -2,9 +2,10 @@
 
 آخر تحقق موثق:
 
-- Commit: `1a4cf3ec0f181bc9f182b3e09954fdf52fcfe496`
-- الفرع: `arena/01a09d45-t3code`
-- CI run: `34796549165`
+- كود التطبيق المتحقق: `b334c82ed65aa323f9c3169140e18a0077156f4b`
+- الفرع النهائي: `arena/01a09d45-t3code`
+- CI run النظيف: `34797004649`
+- CI run الذي التقط metadata للـAPK: `34797339729` (نفس كود التطبيق، مع خطوة تشخيص مؤقتة أزيلت لاحقًا)
 - النتيجة: نجاح
 - Gradle: `8.7`
 - JDK: `Temurin 17.0.20.1`
@@ -15,7 +16,7 @@
 - assembleDebug: ناجح
 - APK: `app/build/outputs/apk/debug/app-debug.apk`
 - حجم APK في CI: `23,986,603` بايت
-- SHA-256: `157dc71216d6c2529f771be45816559f60ed75f95664cf767b24bf83ce624200`
+- SHA-256: `f959561226ba5c4e1afa719f5adbe2061493c1ea399013874134d12f140b1dc4`
 
 ## نموذج الحالة
 
