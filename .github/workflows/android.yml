@@ -63,9 +63,6 @@ jobs:
             assemble.log
             app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
-      - name: Fail if verification failed
-        if: steps.unit.outcome != 'success' || steps.lint.outcome != 'success' || steps.assemble.outcome != 'success'
-        run: exit 1
       - name: Publish temporary diagnostics
         if: always() && (steps.unit.outcome != 'success' || steps.lint.outcome != 'success' || steps.assemble.outcome != 'success') && github.event_name == 'push'
         env:
@@ -80,3 +77,6 @@ jobs:
           git add ci-diagnostics
           git commit -m "ci: publish temporary verification diagnostics [skip ci]" || exit 0
           git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Fail if verification failed
+        if: steps.unit.outcome != 'success' || steps.lint.outcome != 'success' || steps.assemble.outcome != 'success'
+        run: exit 1
