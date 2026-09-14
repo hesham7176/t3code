@@ -39,6 +39,7 @@ class MediaEngine(context: Context) : Player.Listener {
     fun setQueue(uris: List<Uri>, startIndex: Int = 0, startPosition: Long = 0L) {
         player.setMediaItems(uris.map { MediaItem.fromUri(it) }, startIndex, startPosition)
         player.prepare()
+        player.play()
     }
 
     fun play(uri: Uri, startPosition: Long = 0L) {

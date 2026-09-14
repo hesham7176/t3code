@@ -70,12 +70,15 @@ fun MediaScreen(state: ExplorerUiState, mediaPath: String, isVideo: Boolean, onB
     val uri = remember(mediaPath) { if (mediaPath.startsWith("content:")) Uri.parse(mediaPath) else Uri.fromFile(File(mediaPath)) }
     val isImage = FileType.isImage(mediaPath)
     val isAudio = FileType.isAudio(mediaPath)
+    val queue = remember(state.items) { state.items.filter { !it.isDirectory && (it.mimeType.startsWith("video/") || it.mimeType.startsWith("audio/")) } }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(mediaPath) {
+    LaunchedEffect(mediaPath, queue) {
         if (!isImage) {
             val position = if (state.preferences.resumePlayback) app.playbackPositions.get(mediaPath) else 0L
-            engine.play(uri, position)
+            val index = queue.indexOfFirst { it.path == mediaPath }
+            if (queue.size > 1 && index >= 0) engine.setQueue(queue.map { item -> if (item.path.startsWith("content:")) Uri.parse(item.path) else Uri.fromFile(File(item.path)) }, index, position)
+            else engine.play(uri, position)
         }
     }
     DisposableEffect(mediaPath) {
