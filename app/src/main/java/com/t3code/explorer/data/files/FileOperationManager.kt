@@ -25,6 +25,11 @@ class FileOperationManager(private val context: Context) {
         runCatching {
             require(destination.isDirectory || destination.mkdirs()) { "Destination is unavailable" }
             val files = items.map { File(it.path) }
+            files.forEach { source ->
+                val sourcePath = source.canonicalPath
+                val destinationPath = destination.canonicalPath
+                require(destinationPath != sourcePath && !destinationPath.startsWith(sourcePath + File.separator)) { "Cannot copy a folder into itself" }
+            }
             val totalBytes = files.sumOf(::recursiveSize)
             var completedBytes = 0L
             files.forEachIndexed { index, source ->
@@ -44,6 +49,8 @@ class FileOperationManager(private val context: Context) {
             items.forEachIndexed { index, item ->
                 coroutineContext.ensureActive()
                 val source = File(item.path)
+                val destinationPath = destination.canonicalPath
+                require(destinationPath != source.canonicalPath && !destinationPath.startsWith(source.canonicalPath + File.separator)) { "Cannot move a folder into itself" }
                 val target = conflictSafe(File(destination, source.name))
                 if (!source.renameTo(target)) {
                     copyRecursive(source, target) { delta -> _progress.value = OperationProgress("move", source.name, delta, source.length(), index, items.size) }
