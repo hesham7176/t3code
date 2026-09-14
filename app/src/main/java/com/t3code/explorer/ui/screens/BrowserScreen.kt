@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Refresh
@@ -100,6 +101,7 @@ fun BrowserScreen(
     var transferMove by remember { mutableStateOf(false) }
     var createFile by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<FileItem?>(null) }
+    var propertiesTarget by remember { mutableStateOf<FileItem?>(null) }
     val safLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let(viewModel::openSafTree) }
 
     Column(Modifier.fillMaxSize().padding(padding)) {
@@ -134,13 +136,13 @@ fun BrowserScreen(
             val cells = when (state.preferences.viewMode) { ViewMode.SMALL_GRID -> 5; ViewMode.LARGE_GRID -> 2; else -> 3 }
             LazyVerticalGrid(GridCells.Fixed(cells), Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(state.items, key = { it.path }) { item ->
-                    FileGridCard(item, item.path in state.selected, onOpen = { if (item.isDirectory) viewModel.loadDirectory(item.path) else onOpenMedia(item) }, onSelect = { viewModel.toggleSelection(item) }, onRename = { renameTarget = item }, onDelete = { viewModel.toggleSelection(item); showDelete = true }, onShare = { viewModel.share(item) })
+                    FileGridCard(item, item.path in state.selected, onOpen = { if (item.isDirectory) viewModel.loadDirectory(item.path) else onOpenMedia(item) }, onSelect = { viewModel.toggleSelection(item) }, onRename = { renameTarget = item }, onDelete = { viewModel.toggleSelection(item); showDelete = true }, onShare = { viewModel.share(item) }, onProperties = { propertiesTarget = item })
                 }
             }
         } else {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 items(state.items, key = { it.path }) { item ->
-                    FileListRow(item, item.path in state.selected, state.preferences.viewMode.detailLines > 0, onOpen = { if (item.isDirectory) viewModel.loadDirectory(item.path) else onOpenMedia(item) }, onSelect = { viewModel.toggleSelection(item) }, onRename = { renameTarget = item }, onDelete = { viewModel.toggleSelection(item); showDelete = true }, onShare = { viewModel.share(item) })
+                    FileListRow(item, item.path in state.selected, state.preferences.viewMode.detailLines > 0, onOpen = { if (item.isDirectory) viewModel.loadDirectory(item.path) else onOpenMedia(item) }, onSelect = { viewModel.toggleSelection(item) }, onRename = { renameTarget = item }, onDelete = { viewModel.toggleSelection(item); showDelete = true }, onShare = { viewModel.share(item) }, onProperties = { propertiesTarget = item })
                 }
             }
         }
@@ -150,6 +152,7 @@ fun BrowserScreen(
     if (showTransfer) TransferDialog(state.currentPath, transferMove, onDismiss = { showTransfer = false }, onSubmit = { destination -> showTransfer = false; viewModel.transferSelected(destination, transferMove) })
     if (showDelete) AlertDialog(onDismissRequest = { showDelete = false }, title = { Text(stringResource(R.string.delete)) }, text = { Text(stringResource(R.string.confirm_delete)) }, confirmButton = { TextButton(onClick = { showDelete = false; viewModel.deleteSelected() }) { Text(stringResource(R.string.delete)) } }, dismissButton = { TextButton(onClick = { showDelete = false }) { Text(stringResource(R.string.cancel)) } })
     renameTarget?.let { target -> NameDialog(stringResource(R.string.rename), target.name, { renameTarget = null }, { value -> renameTarget = null; viewModel.rename(target, value) }) }
+    propertiesTarget?.let { target -> PropertiesDialog(target, { propertiesTarget = null }) }
     if (showSort) SortDialog(state, { showSort = false }, viewModel)
     if (showView) ViewDialog(state.preferences.viewMode, { showView = false }, viewModel)
 }
@@ -171,7 +174,7 @@ private fun Breadcrumbs(path: String, onPath: (String) -> Unit) {
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun FileGridCard(item: FileItem, selected: Boolean, onOpen: () -> Unit, onSelect: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit) {
+private fun FileGridCard(item: FileItem, selected: Boolean, onOpen: () -> Unit, onSelect: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit, onProperties: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     Card(modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onOpen, onLongClick = onSelect), colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
         Column {
@@ -186,12 +189,12 @@ private fun FileGridCard(item: FileItem, selected: Boolean, onOpen: () -> Unit, 
             }
         }
     }
-    ItemMenu(menu, { menu = false }, { menu = false; onOpen() }, { menu = false; onRename() }, { menu = false; onDelete() }, { menu = false; onShare() })
+    ItemMenu(menu, { menu = false }, { menu = false; onOpen() }, { menu = false; onRename() }, { menu = false; onDelete() }, { menu = false; onShare() }, { menu = false; onProperties() })
 }
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun FileListRow(item: FileItem, selected: Boolean, details: Boolean, onOpen: () -> Unit, onSelect: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit) {
+private fun FileListRow(item: FileItem, selected: Boolean, details: Boolean, onOpen: () -> Unit, onSelect: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit, onProperties: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().combinedClickable(onClick = onOpen, onLongClick = onSelect).background(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
         Preview(item, Modifier.size(48.dp))
@@ -202,7 +205,7 @@ private fun FileListRow(item: FileItem, selected: Boolean, details: Boolean, onO
         }
         IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, null) }
     }
-    ItemMenu(menu, { menu = false }, { menu = false; onOpen() }, { menu = false; onRename() }, { menu = false; onDelete() }, { menu = false; onShare() })
+    ItemMenu(menu, { menu = false }, { menu = false; onOpen() }, { menu = false; onRename() }, { menu = false; onDelete() }, { menu = false; onShare() }, { menu = false; onProperties() })
 }
 
 @Composable
@@ -219,12 +222,13 @@ private fun Preview(item: FileItem, modifier: Modifier) {
 }
 
 @Composable
-private fun ItemMenu(expanded: Boolean, onDismiss: () -> Unit, onOpen: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit) {
+private fun ItemMenu(expanded: Boolean, onDismiss: () -> Unit, onOpen: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit, onProperties: () -> Unit) {
     DropdownMenu(expanded, onDismiss) {
         DropdownMenuItem({ Text(stringResource(R.string.open)) }, onOpen)
         DropdownMenuItem({ Text(stringResource(R.string.rename)) }, onRename)
         DropdownMenuItem({ Text(stringResource(R.string.delete)) }, onDelete)
         DropdownMenuItem({ Text(stringResource(R.string.share)) }, onShare)
+        DropdownMenuItem({ Text(stringResource(R.string.properties)) }, onProperties)
     }
 }
 
@@ -254,6 +258,17 @@ private fun CreateDialog(onDismiss: () -> Unit, onFolder: (String) -> Unit, onFi
 private fun NameDialog(title: String, initial: String, onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
     var value by remember { mutableStateOf(initial) }
     AlertDialog(onDismissRequest = onDismiss, title = { Text(title) }, text = { OutlinedTextField(value, { value = it }, singleLine = true) }, confirmButton = { TextButton({ if (value.isNotBlank()) onSubmit(value) }) { Text(stringResource(R.string.save)) } }, dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } })
+}
+
+@Composable
+private fun PropertiesDialog(item: FileItem, onDismiss: () -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.properties)) }, text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(item.name, style = MaterialTheme.typography.titleMedium)
+        Text(item.path, style = MaterialTheme.typography.bodySmall)
+        Text(item.mimeType)
+        Text(item.size.readableFileSize())
+        Text(formatDate(item.modifiedAt))
+    } }, confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.close)) } })
 }
 
 @Composable
