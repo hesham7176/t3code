@@ -20,6 +20,7 @@ import com.t3code.explorer.domain.model.SortSpec
 import com.t3code.explorer.domain.model.StorageAnalysis
 import com.t3code.explorer.domain.model.StorageLocation
 import com.t3code.explorer.domain.model.ViewMode
+import com.t3code.explorer.domain.util.FileType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -114,20 +115,31 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun createFolder(name: String) = viewModelScope.launch {
-        if (isSafPath()) { showMessage(R.string.saf_operation_unavailable); return@launch }
-        app.operations.createFolder(java.io.File(_uiState.value.currentPath), name).fold({ showMessage(R.string.folder_created) }, ::showError)
+        val currentPath = _uiState.value.currentPath
+        if (currentPath.startsWith("content:")) {
+            app.saf.createDirectory(Uri.parse(currentPath), name).fold({ showMessage(R.string.folder_created) }, ::showError)
+        } else {
+            app.operations.createFolder(java.io.File(currentPath), name).fold({ showMessage(R.string.folder_created) }, ::showError)
+        }
         loadDirectory()
     }
 
     fun createFile(name: String) = viewModelScope.launch {
-        if (isSafPath()) { showMessage(R.string.saf_operation_unavailable); return@launch }
-        app.operations.createFile(java.io.File(_uiState.value.currentPath), name).fold({ showMessage(R.string.file_created) }, ::showError)
+        val currentPath = _uiState.value.currentPath
+        if (currentPath.startsWith("content:")) {
+            app.saf.createFile(Uri.parse(currentPath), FileType.mimeType(name), name).fold({ showMessage(R.string.file_created) }, ::showError)
+        } else {
+            app.operations.createFile(java.io.File(currentPath), name).fold({ showMessage(R.string.file_created) }, ::showError)
+        }
         loadDirectory()
     }
 
     fun rename(item: FileItem, name: String) = viewModelScope.launch {
-        if (item.path.startsWith("content:")) { showMessage(R.string.saf_operation_unavailable); return@launch }
-        app.operations.rename(item, name).fold({ showMessage(R.string.renamed) }, ::showError)
+        if (item.path.startsWith("content:")) {
+            app.saf.rename(Uri.parse(item.path), name).fold({ showMessage(R.string.renamed) }, ::showError)
+        } else {
+            app.operations.rename(item, name).fold({ showMessage(R.string.renamed) }, ::showError)
+        }
         loadDirectory()
     }
 

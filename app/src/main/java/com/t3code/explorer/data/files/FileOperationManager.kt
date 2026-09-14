@@ -26,6 +26,7 @@ class FileOperationManager(private val context: Context) {
             require(destination.isDirectory || destination.mkdirs()) { "Destination is unavailable" }
             val files = items.map { File(it.path) }
             files.forEach { source ->
+                require(source.exists()) { "Source file is missing: ${source.path}" }
                 val sourcePath = source.canonicalPath
                 val destinationPath = destination.canonicalPath
                 require(destinationPath != sourcePath && !destinationPath.startsWith(sourcePath + File.separator)) { "Cannot copy a folder into itself" }
@@ -46,18 +47,27 @@ class FileOperationManager(private val context: Context) {
     suspend fun move(items: List<FileItem>, destination: File): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             require(destination.isDirectory || destination.mkdirs())
-            items.forEachIndexed { index, item ->
+            val sources = items.map { File(it.path) }
+            sources.forEach { require(it.exists()) { "Source file is missing: ${it.path}" } }
+            val totalBytes = sources.sumOf(::recursiveSize)
+            var completedBytes = 0L
+            sources.forEachIndexed { index, source ->
                 coroutineContext.ensureActive()
-                val source = File(item.path)
                 val destinationPath = destination.canonicalPath
                 require(destinationPath != source.canonicalPath && !destinationPath.startsWith(source.canonicalPath + File.separator)) { "Cannot move a folder into itself" }
                 val target = conflictSafe(File(destination, source.name))
                 if (!source.renameTo(target)) {
-                    copyRecursive(source, target) { delta -> _progress.value = OperationProgress("move", source.name, delta, source.length(), index, items.size) }
-                    deleteRecursively(source)
+                    copyRecursive(source, target) { delta ->
+                        completedBytes += delta
+                        _progress.value = OperationProgress("move", source.name, completedBytes, totalBytes, index, sources.size)
+                    }
+                    require(deleteRecursively(source)) { "Could not remove the original after copying" }
+                } else {
+                    completedBytes += recursiveSize(target)
+                    _progress.value = OperationProgress("move", source.name, completedBytes, totalBytes, index + 1, sources.size)
                 }
             }
-            _progress.value = OperationProgress("move", "", 0, 0, items.size, items.size, isComplete = true)
+            _progress.value = OperationProgress("move", "", totalBytes, totalBytes, sources.size, sources.size, isComplete = true)
         }.also { if (it.isFailure) _progress.value = _progress.value?.copy(error = it.exceptionOrNull()?.message) }
     }
 
