@@ -26,15 +26,43 @@ jobs:
       - name: Install SDK platform
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+        id: unit
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew testDebugUnitTest --stacktrace --console=plain 2>&1 | tee unit-tests.log
       - name: Lint
-        run: ./gradlew lintDebug --stacktrace
+        id: lint
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew lintDebug --stacktrace --console=plain 2>&1 | tee lint.log
       - name: Assemble debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        id: assemble
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug --stacktrace --console=plain 2>&1 | tee assemble.log
       - name: Report APK
-        run: ls -lh app/build/outputs/apk/debug/*.apk
-      - name: Upload debug APK
+        if: always()
+        run: |
+          if compgen -G 'app/build/outputs/apk/debug/*.apk' > /dev/null; then
+            ls -lh app/build/outputs/apk/debug/*.apk
+            sha256sum app/build/outputs/apk/debug/*.apk
+          else
+            echo 'No debug APK was generated.'
+          fi
+      - name: Upload verification logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: media-explorer-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: android-verification-logs
+          path: |
+            unit-tests.log
+            lint.log
+            assemble.log
+            app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+      - name: Fail if verification failed
+        if: steps.unit.outcome != 'success' || steps.lint.outcome != 'success' || steps.assemble.outcome != 'success'
+        run: exit 1
