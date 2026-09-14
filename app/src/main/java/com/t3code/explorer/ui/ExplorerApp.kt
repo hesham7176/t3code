@@ -1,7 +1,9 @@
 package com.t3code.explorer.ui
 
 import android.content.Intent
-import android.provider.Settings
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
@@ -25,16 +27,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.t3code.explorer.R
 import com.t3code.explorer.ui.screens.AnalyzerScreen
+import com.t3code.explorer.ui.screens.AppManagerScreen
 import com.t3code.explorer.ui.screens.BrowserScreen
 import com.t3code.explorer.ui.screens.HomeScreen
 import com.t3code.explorer.ui.screens.MediaScreen
+import com.t3code.explorer.ui.screens.RecycleBinScreen
 import com.t3code.explorer.ui.screens.SearchScreen
 import com.t3code.explorer.ui.screens.SettingsScreen
+import com.t3code.explorer.ui.screens.TextEditorScreen
+import com.t3code.explorer.domain.util.FileType
 
-private enum class Destination { HOME, BROWSE, SEARCH, SETTINGS, ANALYZER, MEDIA }
+private enum class Destination { HOME, BROWSE, SEARCH, SETTINGS, ANALYZER, RECYCLE_BIN, APP_MANAGER, TEXT_EDITOR, MEDIA }
 
 @Composable
 fun ExplorerApp(viewModel: ExplorerViewModel) {
@@ -44,6 +51,14 @@ fun ExplorerApp(viewModel: ExplorerViewModel) {
     var destination by rememberSaveable { mutableStateOf(Destination.HOME) }
     var mediaPath by rememberSaveable { mutableStateOf("") }
     var mediaIsVideo by rememberSaveable { mutableStateOf(false) }
+    var textPath by rememberSaveable { mutableStateOf("") }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
+    val openBrowser: () -> Unit = {
+        val permissions = PermissionController.sharedStoragePermissions()
+        if (permissions.any { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }) permissionLauncher.launch(permissions)
+        destination = Destination.BROWSE
+        viewModel.loadDirectory()
+    }
 
     LaunchedEffect(state.message, state.error) {
         val message = state.message ?: state.error
@@ -73,15 +88,26 @@ fun ExplorerApp(viewModel: ExplorerViewModel) {
     ) { padding ->
         Box(Modifier.fillMaxSize()) {
             when (destination) {
-                Destination.HOME -> HomeScreen(state, padding, onBrowse = { destination = Destination.BROWSE; viewModel.loadDirectory() }, onOpenPath = { path -> viewModel.loadDirectory(path); destination = Destination.BROWSE }, onAnalyze = { destination = Destination.ANALYZER; viewModel.analyzeStorage() })
+                Destination.HOME -> HomeScreen(state, padding, onBrowse = openBrowser, onOpenPath = { path -> viewModel.loadDirectory(path); destination = Destination.BROWSE }, onAnalyze = { destination = Destination.ANALYZER; viewModel.analyzeStorage() })
                 Destination.BROWSE -> BrowserScreen(state, padding, viewModel, onOpenMedia = { item ->
-                    mediaPath = item.path
-                    mediaIsVideo = item.mimeType.startsWith("video/")
-                    destination = Destination.MEDIA
+                    if (FileType.isText(item.path)) {
+                        textPath = item.path
+                        destination = Destination.TEXT_EDITOR
+                    } else {
+                        mediaPath = item.path
+                        mediaIsVideo = item.mimeType.startsWith("video/")
+                        destination = Destination.MEDIA
+                    }
                 }, onSearch = { destination = Destination.SEARCH })
-                Destination.SEARCH -> SearchScreen(state, padding, viewModel, onOpenMedia = { item -> mediaPath = item.path; mediaIsVideo = item.mimeType.startsWith("video/"); destination = Destination.MEDIA })
-                Destination.SETTINGS -> SettingsScreen(state, padding, viewModel, onOpenStorageSettings = { context.startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS)) })
+                Destination.SEARCH -> SearchScreen(state, padding, viewModel, onOpenMedia = { item ->
+                    if (FileType.isText(item.path)) { textPath = item.path; destination = Destination.TEXT_EDITOR }
+                    else { mediaPath = item.path; mediaIsVideo = item.mimeType.startsWith("video/"); destination = Destination.MEDIA }
+                })
+                Destination.SETTINGS -> SettingsScreen(state, padding, viewModel, onOpenStorageSettings = { destination = Destination.ANALYZER; viewModel.analyzeStorage() }, onOpenRecycleBin = { viewModel.loadRecycleBin(); destination = Destination.RECYCLE_BIN }, onOpenAppManager = { destination = Destination.APP_MANAGER })
                 Destination.ANALYZER -> AnalyzerScreen(state.analysis, state.isAnalyzing, padding)
+                Destination.RECYCLE_BIN -> RecycleBinScreen(state, padding, viewModel)
+                Destination.APP_MANAGER -> AppManagerScreen(padding)
+                Destination.TEXT_EDITOR -> TextEditorScreen(textPath, padding, onBack = { destination = Destination.BROWSE })
                 Destination.MEDIA -> MediaScreen(state, mediaPath, mediaIsVideo, onBack = { destination = Destination.BROWSE })
             }
         }

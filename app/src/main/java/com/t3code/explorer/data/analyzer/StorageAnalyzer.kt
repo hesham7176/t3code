@@ -15,17 +15,26 @@ class StorageAnalyzer {
         runCatching {
             val categories = FileCategory.values().associateWith { 0L }.toMutableMap()
             val files = mutableListOf<FileItem>()
-            val folders = mutableListOf<FileItem>()
+            val directorySizes = mutableMapOf<File, Long>()
             root.walkTopDown().forEach { file ->
                 coroutineContext.ensureActive()
                 if (file.isDirectory) {
-                    if (file != root) folders += FileItem(file.name, file.path, isDirectory = true, size = 0, modifiedAt = file.lastModified(), mimeType = "inode/directory", extension = "")
+                    directorySizes.putIfAbsent(file, 0L)
                 } else {
                     val size = file.length()
                     val category = FileType.category(file.name)
                     categories[category] = categories.getValue(category) + size
                     if (files.size < 200) files += FileItem(file.name, file.path, isDirectory = false, size = size, modifiedAt = file.lastModified(), mimeType = FileType.mimeType(file.name), extension = FileType.extension(file.name))
+                    var parent = file.parentFile
+                    while (parent != null && parent.path.startsWith(root.path)) {
+                        directorySizes[parent] = (directorySizes[parent] ?: 0L) + size
+                        if (parent == root) break
+                        parent = parent.parentFile
+                    }
                 }
+            }
+            val folders = directorySizes.filterKeys { it != root }.map { (directory, size) ->
+                FileItem(directory.name, directory.path, isDirectory = true, size = size, modifiedAt = directory.lastModified(), mimeType = "inode/directory", extension = "")
             }
             val total = root.totalSpace
             StorageAnalysis(total, (total - root.usableSpace).coerceAtLeast(0), root.usableSpace, categories, files.sortedByDescending { it.size }.take(20), folders.sortedByDescending { it.size }.take(20))

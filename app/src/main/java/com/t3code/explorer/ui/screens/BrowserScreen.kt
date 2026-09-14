@@ -1,5 +1,7 @@
 package com.t3code.explorer.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -31,6 +33,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MoreVert
@@ -65,6 +68,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
@@ -92,8 +96,11 @@ fun BrowserScreen(
     var showSort by remember { mutableStateOf(false) }
     var showView by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
+    var showTransfer by remember { mutableStateOf(false) }
+    var transferMove by remember { mutableStateOf(false) }
     var createFile by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<FileItem?>(null) }
+    val safLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let(viewModel::openSafTree) }
 
     Column(Modifier.fillMaxSize().padding(padding)) {
         TopAppBar(
@@ -103,6 +110,8 @@ fun BrowserScreen(
             },
             actions = {
                 if (state.selected.isNotEmpty()) {
+                    IconButton(onClick = { transferMove = false; showTransfer = true }) { Icon(Icons.Default.Description, stringResource(R.string.copy)) }
+                    IconButton(onClick = { transferMove = true; showTransfer = true }) { Icon(Icons.Default.Folder, stringResource(R.string.move)) }
                     IconButton(onClick = { showDelete = true }) { Icon(Icons.Default.Delete, stringResource(R.string.delete)) }
                     IconButton(onClick = viewModel::clearSelection) { Icon(Icons.Default.Close, stringResource(R.string.cancel)) }
                 } else {
@@ -110,6 +119,7 @@ fun BrowserScreen(
                     IconButton(onClick = { showSort = true }) { Icon(Icons.Default.Sort, stringResource(R.string.sort)) }
                     IconButton(onClick = { showView = true }) { Icon(if (state.preferences.viewMode.isGrid) Icons.Default.ViewList else Icons.Default.GridView, stringResource(R.string.view)) }
                     IconButton(onClick = { showCreate = true }) { Icon(Icons.Default.Add, stringResource(R.string.create)) }
+                    IconButton(onClick = { safLauncher.launch(null) }) { Icon(Icons.Default.FolderOpen, stringResource(R.string.choose_folder)) }
                     IconButton(onClick = { viewModel.loadDirectory() }) { Icon(Icons.Default.Refresh, stringResource(R.string.refresh)) }
                 }
             }
@@ -137,6 +147,7 @@ fun BrowserScreen(
     }
 
     if (showCreate) CreateDialog(onDismiss = { showCreate = false }, onFolder = { name -> showCreate = false; viewModel.createFolder(name) }, onFile = { name -> showCreate = false; viewModel.createFile(name) })
+    if (showTransfer) TransferDialog(state.currentPath, transferMove, onDismiss = { showTransfer = false }, onSubmit = { destination -> showTransfer = false; viewModel.transferSelected(destination, transferMove) })
     if (showDelete) AlertDialog(onDismissRequest = { showDelete = false }, title = { Text(stringResource(R.string.delete)) }, text = { Text(stringResource(R.string.confirm_delete)) }, confirmButton = { TextButton(onClick = { showDelete = false; viewModel.deleteSelected() }) { Text(stringResource(R.string.delete)) } }, dismissButton = { TextButton(onClick = { showDelete = false }) { Text(stringResource(R.string.cancel)) } })
     renameTarget?.let { target -> NameDialog(stringResource(R.string.rename), target.name, { renameTarget = null }, { value -> renameTarget = null; viewModel.rename(target, value) }) }
     if (showSort) SortDialog(state, { showSort = false }, viewModel)
@@ -144,6 +155,7 @@ fun BrowserScreen(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun Breadcrumbs(path: String, onPath: (String) -> Unit) {
     val parts = path.split(File.separator).filter { it.isNotBlank() }
     Row(Modifier.fillMaxWidth().horizontalScrollIfNeeded().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -214,6 +226,12 @@ private fun ItemMenu(expanded: Boolean, onDismiss: () -> Unit, onOpen: () -> Uni
         DropdownMenuItem({ Text(stringResource(R.string.delete)) }, onDelete)
         DropdownMenuItem({ Text(stringResource(R.string.share)) }, onShare)
     }
+}
+
+@Composable
+private fun TransferDialog(initial: String, moving: Boolean, onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
+    var value by remember { mutableStateOf(initial) }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(if (moving) stringResource(R.string.move) else stringResource(R.string.copy)) }, text = { OutlinedTextField(value, { value = it }, label = { Text(stringResource(R.string.choose_folder)) }, singleLine = true) }, confirmButton = { TextButton({ if (value.isNotBlank()) onSubmit(value) }) { Text(stringResource(R.string.save)) } }, dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } })
 }
 
 @Composable

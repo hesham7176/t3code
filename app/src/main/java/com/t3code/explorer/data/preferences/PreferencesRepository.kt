@@ -21,7 +21,8 @@ data class UserPreferences(
     val folderCovers: Boolean = true,
     val resumePlayback: Boolean = true,
     val backgroundPlayback: Boolean = true,
-    val theme: String = "system"
+    val theme: String = "system",
+    val language: String = "system"
 )
 
 class PreferencesRepository(private val context: Context) {
@@ -34,6 +35,7 @@ class PreferencesRepository(private val context: Context) {
         val resumePlayback = booleanPreferencesKey("resume_playback")
         val backgroundPlayback = booleanPreferencesKey("background_playback")
         val theme = stringPreferencesKey("theme")
+        val language = stringPreferencesKey("language")
     }
 
     val preferences: Flow<UserPreferences> = context.settingsDataStore.data.map { values ->
@@ -45,7 +47,8 @@ class PreferencesRepository(private val context: Context) {
             folderCovers = values[Keys.folderCovers] ?: true,
             resumePlayback = values[Keys.resumePlayback] ?: true,
             backgroundPlayback = values[Keys.backgroundPlayback] ?: true,
-            theme = values[Keys.theme] ?: "system"
+            theme = values[Keys.theme] ?: "system",
+            language = values[Keys.language] ?: "system"
         )
     }
 
@@ -59,4 +62,5 @@ class PreferencesRepository(private val context: Context) {
     suspend fun setResumePlayback(value: Boolean) = context.settingsDataStore.edit { it[Keys.resumePlayback] = value }
     suspend fun setBackgroundPlayback(value: Boolean) = context.settingsDataStore.edit { it[Keys.backgroundPlayback] = value }
     suspend fun setTheme(value: String) = context.settingsDataStore.edit { it[Keys.theme] = value }
+    suspend fun setLanguage(value: String) = context.settingsDataStore.edit { it[Keys.language] = value }
 }

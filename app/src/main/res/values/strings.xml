@@ -22,6 +22,8 @@
     <string name="used_space">%1$s used of %2$s</string>
     <string name="free_space">%1$s free</string>
     <string name="storage_analyzer">Storage analyzer</string>
+    <string name="storage_summary">%1$s used • %2$s free</string>
+    <string name="largest_files">Largest files</string>
     <string name="file_manager">File manager</string>
     <string name="new_folder">New folder</string>
     <string name="new_file">New file</string>
@@ -71,10 +73,12 @@
     <string name="resume_playback">Resume playback</string>
     <string name="background_playback">Background playback</string>
     <string name="recycle_bin">Recycle bin</string>
+    <string name="restore">Restore</string>
     <string name="network">Network</string>
     <string name="cloud_storage">Cloud storage</string>
     <string name="app_manager">App manager</string>
     <string name="text_editor">Text editor</string>
+    <string name="saved">Saved</string>
     <string name="unsupported_file">This file type is not supported</string>
     <string name="permission_required">Storage permission is required to browse shared storage.</string>
     <string name="choose_folder">Choose folder</string>

@@ -1,12 +1,16 @@
 package com.t3code.explorer.ui
 
 import android.app.Application
+import android.net.Uri
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.t3code.explorer.ExplorerApplication
 import com.t3code.explorer.data.analyzer.StorageAnalyzer
 import com.t3code.explorer.data.preferences.UserPreferences
 import com.t3code.explorer.domain.model.FileItem
+import com.t3code.explorer.domain.model.RecycleEntry
 import com.t3code.explorer.domain.model.SearchFilters
 import com.t3code.explorer.domain.model.SortDirection
 import com.t3code.explorer.domain.model.SortField
@@ -32,6 +36,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             app.preferences.preferences.collect { preferences ->
                 _uiState.update { it.copy(preferences = preferences) }
+                if (preferences.language != "system" && AppCompatDelegate.applicationLocales.toLanguageTags() != preferences.language) AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(preferences.language))
                 loadDirectory(_uiState.value.currentPath)
             }
         }
@@ -41,12 +46,19 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     fun loadDirectory(path: String = _uiState.value.currentPath) {
         _uiState.update { it.copy(currentPath = path, isLoading = true, error = null, selected = emptySet()) }
         viewModelScope.launch {
-            val result = app.files.list(path, _uiState.value.preferences.toSortSpec(), _uiState.value.preferences.showHidden)
+            val result = if (path.startsWith("content:")) app.files.listSafTree(Uri.parse(path), _uiState.value.preferences.showHidden) else app.files.list(path, _uiState.value.preferences.toSortSpec(), _uiState.value.preferences.showHidden)
             result.fold(
                 onSuccess = { items -> _uiState.update { it.copy(items = items, isLoading = false) } },
                 onFailure = { error -> _uiState.update { it.copy(items = emptyList(), isLoading = false, error = error.message) } }
             )
         }
+    }
+
+    fun openSafTree(uri: Uri) {
+        runCatching {
+            app.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        }
+        loadDirectory(uri.toString())
     }
 
     fun navigateUp() {
@@ -68,6 +80,10 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     fun setResumePlayback(value: Boolean) { viewModelScope.launch { app.preferences.setResumePlayback(value) } }
     fun setBackgroundPlayback(value: Boolean) { viewModelScope.launch { app.preferences.setBackgroundPlayback(value) } }
     fun setTheme(value: String) { viewModelScope.launch { app.preferences.setTheme(value) } }
+    fun setLanguage(value: String) {
+        viewModelScope.launch { app.preferences.setLanguage(value) }
+        AppCompatDelegate.setApplicationLocales(if (value == "system") LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(value))
+    }
 
     fun createFolder(name: String) = viewModelScope.launch {
         app.operations.createFolder(java.io.File(_uiState.value.currentPath), name).fold({ showMessage("Folder created") }, ::showError)
@@ -81,6 +97,14 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     fun rename(item: FileItem, name: String) = viewModelScope.launch {
         app.operations.rename(item, name).fold({ showMessage("Renamed") }, ::showError)
+        loadDirectory()
+    }
+
+    fun transferSelected(destination: String, move: Boolean) = viewModelScope.launch {
+        val items = _uiState.value.items.filter { it.path in _uiState.value.selected }
+        val result = if (move) app.operations.move(items, java.io.File(destination)) else app.operations.copy(items, java.io.File(destination))
+        result.fold({ showMessage(if (move) "Moved" else "Copied") }, ::showError)
+        clearSelection()
         loadDirectory()
     }
 
@@ -113,6 +137,20 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun loadRecycleBin() {
+        viewModelScope.launch { _uiState.update { it.copy(recycleEntries = app.recycleBin.list()) } }
+    }
+
+    fun restore(entry: RecycleEntry) = viewModelScope.launch {
+        app.operations.restoreRecycleEntry(com.t3code.explorer.data.files.RecycleEntryRecord(entry.originalPath, entry.deletedPath)).fold({ showMessage("Restored") }, ::showError)
+        loadRecycleBin()
+    }
+
+    fun emptyRecycleBin() = viewModelScope.launch {
+        app.recycleBin.empty().fold({ showMessage("Recycle bin emptied") }, ::showError)
+        loadRecycleBin()
+    }
+
     fun consumeMessage() = _uiState.update { it.copy(message = null, error = null) }
     private fun showMessage(message: String) { _uiState.update { it.copy(message = message) } }
     private fun showError(error: Throwable) { _uiState.update { it.copy(error = error.message ?: "Operation failed") } }
@@ -130,6 +168,7 @@ data class ExplorerUiState(
     val searchResults: List<FileItem> = emptyList(),
     val isAnalyzing: Boolean = false,
     val analysis: StorageAnalysis? = null,
+    val recycleEntries: List<RecycleEntry> = emptyList(),
     val operation: com.t3code.explorer.domain.model.OperationProgress? = null,
     val message: String? = null,
     val error: String? = null,

@@ -89,6 +89,7 @@ class FileOperationManager(private val context: Context) {
     suspend fun restoreRecycleEntry(entry: RecycleEntryRecord): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val target = conflictSafe(File(entry.originalPath))
+            target.parentFile?.mkdirs()
             require(File(entry.deletedPath).renameTo(target)) { "Restore failed" }
             File(entry.deletedPath + ".meta").delete()
         }

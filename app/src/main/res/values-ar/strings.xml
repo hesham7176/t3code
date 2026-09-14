@@ -22,6 +22,8 @@
     <string name="used_space">%1$s مستخدم من %2$s</string>
     <string name="free_space">%1$s متاح</string>
     <string name="storage_analyzer">محلل التخزين</string>
+    <string name="storage_summary">%1$s مستخدم • %2$s متاح</string>
+    <string name="largest_files">أكبر الملفات</string>
     <string name="file_manager">مدير الملفات</string>
     <string name="new_folder">مجلد جديد</string>
     <string name="new_file">ملف جديد</string>
@@ -71,10 +73,12 @@
     <string name="resume_playback">استكمال التشغيل</string>
     <string name="background_playback">التشغيل في الخلفية</string>
     <string name="recycle_bin">سلة المحذوفات</string>
+    <string name="restore">استعادة</string>
     <string name="network">الشبكة</string>
     <string name="cloud_storage">التخزين السحابي</string>
     <string name="app_manager">مدير التطبيقات</string>
     <string name="text_editor">محرر النصوص</string>
+    <string name="saved">تم الحفظ</string>
     <string name="unsupported_file">نوع الملف غير مدعوم</string>
     <string name="permission_required">يلزم إذن التخزين لتصفح التخزين المشترك.</string>
     <string name="choose_folder">اختيار مجلد</string>

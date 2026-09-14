@@ -37,23 +37,29 @@ import com.t3code.explorer.ui.ExplorerUiState
 import com.t3code.explorer.ui.ExplorerViewModel
 
 @Composable
-fun SettingsScreen(state: ExplorerUiState, padding: PaddingValues, viewModel: ExplorerViewModel, onOpenStorageSettings: () -> Unit) {
+fun SettingsScreen(state: ExplorerUiState, padding: PaddingValues, viewModel: ExplorerViewModel, onOpenStorageSettings: () -> Unit, onOpenRecycleBin: () -> Unit, onOpenAppManager: () -> Unit) {
     var themeDialog by remember { mutableStateOf(false) }
+    var languageDialog by remember { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize().padding(padding), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         item { Text(stringResource(R.string.settings), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(20.dp)) }
         item { Text(stringResource(R.string.appearance), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) }
         item { SettingRow(Icons.Default.DarkMode, stringResource(R.string.theme), state.preferences.theme.replaceFirstChar { it.uppercase() }, { themeDialog = true }) }
-        item { SettingRow(Icons.Default.Language, stringResource(R.string.language), stringResource(R.string.english), {}) }
+        item { SettingRow(Icons.Default.Language, stringResource(R.string.language), if (state.preferences.language == "ar") stringResource(R.string.arabic) else if (state.preferences.language == "en") stringResource(R.string.english) else stringResource(R.string.system_default), { languageDialog = true }) }
         item { HorizontalDivider() }
         item { Text(stringResource(R.string.file_manager), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) }
         item { SwitchRow(Icons.Default.Folder, stringResource(R.string.folder_covers), state.preferences.folderCovers, viewModel::setFolderCovers) }
         item { SwitchRow(Icons.Default.Folder, stringResource(R.string.show_hidden), state.preferences.showHidden, viewModel::setShowHidden) }
         item { SettingRow(Icons.Default.Storage, stringResource(R.string.storage), stringResource(R.string.storage_analyzer), onOpenStorageSettings) }
+        item { SettingRow(Icons.Default.Folder, stringResource(R.string.recycle_bin), stringResource(R.string.restore), onOpenRecycleBin) }
+        item { SettingRow(Icons.Default.Folder, stringResource(R.string.app_manager), stringResource(R.string.app_manager), onOpenAppManager) }
         item { HorizontalDivider() }
         item { Text(stringResource(R.string.media_player), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) }
         item { SwitchRow(Icons.Default.PlayCircle, stringResource(R.string.resume_playback), state.preferences.resumePlayback, viewModel::setResumePlayback) }
         item { SwitchRow(Icons.Default.PlayCircle, stringResource(R.string.background_playback), state.preferences.backgroundPlayback, viewModel::setBackgroundPlayback) }
         item { Text(stringResource(R.string.version, "0.1.0"), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    }
+    if (languageDialog) {
+        AlertDialog(onDismissRequest = { languageDialog = false }, title = { Text(stringResource(R.string.language)) }, text = { Column { listOf("system" to R.string.system_default, "en" to R.string.english, "ar" to R.string.arabic).forEach { (value, label) -> Row(Modifier.fillMaxWidth().clickable { viewModel.setLanguage(value); languageDialog = false }.padding(vertical = 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { RadioButton(state.preferences.language == value, null); Text(stringResource(label)) } } } }, confirmButton = { TextButton({ languageDialog = false }) { Text(stringResource(R.string.close)) } })
     }
     if (themeDialog) {
         AlertDialog(onDismissRequest = { themeDialog = false }, title = { Text(stringResource(R.string.theme)) }, text = { Column { listOf("system" to R.string.system_default, "light" to R.string.light, "dark" to R.string.dark).forEach { (value, label) -> Row(Modifier.fillMaxWidth().clickable { viewModel.setTheme(value); themeDialog = false }.padding(vertical = 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { RadioButton(state.preferences.theme == value, null); Text(stringResource(label)) } } } }, confirmButton = { TextButton({ themeDialog = false }) { Text(stringResource(R.string.close)) } })

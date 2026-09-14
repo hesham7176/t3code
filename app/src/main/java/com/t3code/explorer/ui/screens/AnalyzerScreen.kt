@@ -15,17 +15,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.t3code.explorer.R
 import com.t3code.explorer.domain.model.StorageAnalysis
 import com.t3code.explorer.domain.util.readableFileSize
 
 @Composable
 fun AnalyzerScreen(analysis: StorageAnalysis?, loading: Boolean, padding: PaddingValues) {
     LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { Text("Storage analyzer", style = MaterialTheme.typography.headlineSmall) }
+        item { Text(stringResource(R.string.storage_analyzer), style = MaterialTheme.typography.headlineSmall) }
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         analysis?.let { result ->
-            item { Text("${result.usedBytes.readableFileSize()} used • ${result.freeBytes.readableFileSize()} free") }
-            item { Text("Largest files", style = MaterialTheme.typography.titleMedium) }
+            item { Text(stringResource(R.string.storage_summary, result.usedBytes.readableFileSize(), result.freeBytes.readableFileSize())) }
+            item { Text(stringResource(R.string.largest_files), style = MaterialTheme.typography.titleMedium) }
             items(result.largestFiles) { file -> ListItem({ Text(file.name) }, supportingContent = { Text(file.size.readableFileSize()) }) }
         }
     }
