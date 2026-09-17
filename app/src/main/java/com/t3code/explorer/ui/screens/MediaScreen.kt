@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -72,28 +73,30 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MediaScreen(state: ExplorerUiState, mediaPath: String, isVideo: Boolean, onBack: () -> Unit) {
+fun MediaScreen(state: ExplorerUiState, mediaPath: String, isVideo: Boolean, mediaMimeType: String = "", onBack: () -> Unit) {
     val context = LocalContext.current
     val app = context.applicationContext as ExplorerApplication
     val engine = app.mediaEngine
     val playback by engine.state.collectAsStateWithLifecycle()
     val uri = remember(mediaPath) { if (mediaPath.startsWith("content:")) Uri.parse(mediaPath) else Uri.fromFile(File(mediaPath)) }
-    val isImage = FileType.isImage(mediaPath)
-    val isAudio = FileType.isAudio(mediaPath)
+    val displayName = remember(mediaPath) { uri.lastPathSegment?.substringAfterLast(':')?.substringAfterLast('/') ?: File(mediaPath).name }
+    val isImage = mediaMimeType.startsWith("image/") || FileType.isImage(mediaPath)
+    val isAudio = mediaMimeType.startsWith("audio/") || FileType.isAudio(mediaPath)
     var fullscreen by rememberSaveable(mediaPath) { mutableStateOf(false) }
     val activity = context as? Activity
+    val originalOrientation = remember(activity) { activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
     DisposableEffect(fullscreen, isVideo) {
         activity?.let {
             WindowCompat.setDecorFitsSystemWindows(it.window, !fullscreen)
             val controller = WindowInsetsControllerCompat(it.window, it.window.decorView)
             if (fullscreen) controller.hide(WindowInsetsCompat.Type.systemBars()) else controller.show(WindowInsetsCompat.Type.systemBars())
-            if (isVideo) it.requestedOrientation = if (fullscreen) ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            if (isVideo) it.requestedOrientation = if (fullscreen) ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE else originalOrientation
         }
         onDispose {
             activity?.let {
                 WindowCompat.setDecorFitsSystemWindows(it.window, true)
                 WindowInsetsControllerCompat(it.window, it.window.decorView).show(WindowInsetsCompat.Type.systemBars())
-                if (isVideo) it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                if (isVideo) it.requestedOrientation = originalOrientation
             }
         }
     }
@@ -118,14 +121,14 @@ fun MediaScreen(state: ExplorerUiState, mediaPath: String, isVideo: Boolean, onB
     }
 
     Column(Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text(File(mediaPath).name) }, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }, actions = { if (!isImage) IconButton({ fullscreen = !fullscreen }) { Icon(Icons.Default.Fullscreen, stringResource(R.string.full_screen)) } })
+        TopAppBar(title = { Text(displayName) }, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }, actions = { if (!isImage) IconButton({ fullscreen = !fullscreen }) { Icon(Icons.Default.Fullscreen, stringResource(R.string.full_screen)) } })
         when {
             isImage -> ImageGallery(state, mediaPath)
             isVideo -> Box(Modifier.fillMaxSize()) {
                 AndroidView({ PlayerView(it).apply { player = engine.exoPlayer; useController = true; keepScreenOn = true } }, Modifier.fillMaxSize())
                 VideoGestureOverlay(context, engine)
             }
-            isAudio -> AudioControls(playback, File(mediaPath).name, engine)
+            isAudio -> AudioControls(playback, displayName, engine)
             else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.unsupported_file), color = MaterialTheme.colorScheme.error) }
         }
     }
@@ -172,6 +175,8 @@ private fun VideoGestureOverlay(context: Context, engine: com.t3code.explorer.me
     val decider = remember { VideoGestureDecider() }
     var leftSide by remember { mutableStateOf(false) }
     var lockedAction by remember { mutableStateOf(GestureAction.NONE) }
+    var totalDragX by remember { mutableStateOf(0f) }
+    var totalDragY by remember { mutableStateOf(0f) }
     Box(
         Modifier.fillMaxSize()
             .padding(bottom = 72.dp)
@@ -183,10 +188,19 @@ private fun VideoGestureOverlay(context: Context, engine: com.t3code.explorer.me
             }
             .pointerInput(Unit) {
                 detectDragGestures(
-                    onDragStart = { offset -> leftSide = offset.x < size.width / 2f; lockedAction = GestureAction.NONE },
+                    onDragStart = { offset ->
+                        leftSide = offset.x < size.width / 2f
+                        lockedAction = GestureAction.NONE
+                        totalDragX = 0f
+                        totalDragY = 0f
+                    },
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        if (lockedAction == GestureAction.NONE) lockedAction = decider.decide(dragAmount.x, dragAmount.y, size.width.toFloat(), leftSide).action
+                        totalDragX += dragAmount.x
+                        totalDragY += dragAmount.y
+                        if (lockedAction == GestureAction.NONE) {
+                            lockedAction = decider.decide(totalDragX, totalDragY, size.width.toFloat(), leftSide).action
+                        }
                         when (lockedAction) {
                             GestureAction.SEEK -> engine.seekBy((dragAmount.x / size.width * 30_000f).toLong())
                             GestureAction.VOLUME -> changeVolume(context, dragAmount.y)
@@ -194,7 +208,16 @@ private fun VideoGestureOverlay(context: Context, engine: com.t3code.explorer.me
                             else -> Unit
                         }
                     },
-                    onDragEnd = { lockedAction = GestureAction.NONE }
+                    onDragEnd = {
+                        lockedAction = GestureAction.NONE
+                        totalDragX = 0f
+                        totalDragY = 0f
+                    },
+                    onDragCancel = {
+                        lockedAction = GestureAction.NONE
+                        totalDragX = 0f
+                        totalDragY = 0f
+                    }
                 )
             }
     )
@@ -215,15 +238,21 @@ private fun changeBrightness(context: Context, deltaY: Float) {
     activity.window.attributes = attributes
 }
 
+private fun nextSpeed(current: Float): Float = listOf(1f, 1.25f, 1.5f, 2f).let { speeds ->
+    speeds[(speeds.indexOfFirst { kotlin.math.abs(it - current) < 0.01f } + 1).mod(speeds.size)]
+}
+
 @Composable
 private fun AudioControls(playback: com.t3code.explorer.media.PlaybackState, title: String, engine: com.t3code.explorer.media.MediaEngine) {
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Icon(Icons.Default.PlayArrow, null, Modifier.size(120.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(24.dp))
         Text(title, style = MaterialTheme.typography.headlineSmall)
+        playback.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
         Spacer(Modifier.height(20.dp))
         Slider(value = if (playback.durationMs > 0) playback.positionMs.toFloat() / playback.durationMs else 0f, onValueChange = { fraction -> engine.exoPlayer.seekTo((fraction * playback.durationMs).toLong()) }, modifier = Modifier.fillMaxWidth())
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(formatDuration(playback.positionMs)); Text(formatDuration(playback.durationMs)) }
+        TextButton(onClick = { engine.setSpeed(nextSpeed(playback.speed)) }) { Text("${playback.speed}x") }
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton({ engine.exoPlayer.seekToPrevious() }) { Icon(Icons.Default.SkipPrevious, null) }
             IconButton({ engine.toggle() }) { Icon(if (playback.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, Modifier.size(52.dp)) }

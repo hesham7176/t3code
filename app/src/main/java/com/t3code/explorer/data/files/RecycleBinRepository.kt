@@ -3,7 +3,7 @@ package com.t3code.explorer.data.files
 import android.content.Context
 import com.t3code.explorer.domain.model.RecycleEntry
 import java.io.File
-import java.util.Base64
+import com.t3code.explorer.domain.util.RecycleMetadataCodec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -33,8 +33,7 @@ class RecycleBinRepository(private val context: Context) {
     private fun decodeOriginalPath(metadata: File): String {
         if (!metadata.exists()) return ""
         val encoded = runCatching { metadata.readText() }.getOrDefault("")
-        return runCatching { String(Base64.getDecoder().decode(encoded), Charsets.UTF_8) }
-            .getOrDefault(encoded)
+        return RecycleMetadataCodec.decode(encoded)
     }
 
     private fun recursiveSize(file: File): Long =

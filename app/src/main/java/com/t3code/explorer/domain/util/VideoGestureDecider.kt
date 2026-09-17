@@ -19,7 +19,7 @@ class VideoGestureDecider(
         val distance = maxOf(abs(dx), abs(dy))
         if (distance < touchSlop) return GestureDecision(GestureAction.NONE)
         return if (abs(dx) >= abs(dy) * horizontalBias) {
-            GestureDecision(GestureAction.SEEK, (dx / width).coerceIn(-1f, 1f))
+            GestureDecision(GestureAction.SEEK, (dx / width.coerceAtLeast(1f)).coerceIn(-1f, 1f))
         } else if (abs(dy) > abs(dx)) {
             val amount = (-dy / 600f).coerceIn(-1f, 1f)
             GestureDecision(if (isLeftSide) GestureAction.BRIGHTNESS else GestureAction.VOLUME, amount)

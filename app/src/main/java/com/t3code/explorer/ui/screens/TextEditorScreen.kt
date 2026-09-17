@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.t3code.explorer.R
@@ -34,13 +35,17 @@ import kotlinx.coroutines.launch
 fun TextEditorScreen(path: String, padding: PaddingValues, onBack: () -> Unit) {
     var content by remember(path) { mutableStateOf("") }
     var error by remember(path) { mutableStateOf<String?>(null) }
-    val repository = remember { TextDocumentRepository() }
+    val context = LocalContext.current
+    val repository = remember(context) { TextDocumentRepository(context) }
     val scope = rememberCoroutineScope()
+    val isSafDocument = path.startsWith("content:")
+    val uri = remember(path) { if (isSafDocument) android.net.Uri.parse(path) else null }
     LaunchedEffect(path) {
-        repository.read(File(path)).fold({ content = it }, { error = it.message })
+        val result = if (uri != null) repository.read(uri) else repository.read(File(path))
+        result.fold({ content = it; error = null }, { error = it.message })
     }
     Column(Modifier.fillMaxSize().padding(padding)) {
-        TopAppBar(title = { Text(File(path).name) }, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }, actions = { Button(onClick = { scope.launch { repository.write(File(path), content).onFailure { error = it.message } } }) { Text(stringResource(R.string.save)) } })
+        TopAppBar(title = { Text(uri?.lastPathSegment?.substringAfterLast(':') ?: File(path).name) }, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } }, actions = { Button(onClick = { scope.launch { val result = if (uri != null) repository.write(uri, content) else repository.write(File(path), content); result.onFailure { error = it.message } } }) { Text(stringResource(R.string.save)) } })
         OutlinedTextField(content, { content = it }, Modifier.fillMaxWidth().weight(1f).padding(12.dp), isError = error != null)
         error?.let { Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error, modifier = Modifier.padding(12.dp)) }
     }

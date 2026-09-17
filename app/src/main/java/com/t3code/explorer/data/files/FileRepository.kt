@@ -6,10 +6,11 @@ import androidx.documentfile.provider.DocumentFile
 import com.t3code.explorer.domain.model.FileCategory
 import com.t3code.explorer.domain.model.FileItem
 import com.t3code.explorer.domain.model.SearchFilters
+import com.t3code.explorer.domain.model.SortSpec
 import com.t3code.explorer.domain.util.FileType
 import com.t3code.explorer.domain.util.FolderCoverResolver
+import com.t3code.explorer.domain.util.runCatchingCancellable
 import com.t3code.explorer.domain.util.sortedBySpec
-import com.t3code.explorer.domain.model.SortSpec
 import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +23,7 @@ class FileRepository(
     private val coverResolver: FolderCoverResolver = FolderCoverResolver()
 ) {
     suspend fun list(path: String, sort: SortSpec = SortSpec(), showHidden: Boolean = false): Result<List<FileItem>> = withContext(Dispatchers.IO) {
-        runCatching {
+        runCatchingCancellable {
             val directory = File(path)
             require(directory.isDirectory) { "Not a directory: $path" }
             val items = directory.listFiles()?.asSequence()
@@ -36,9 +37,9 @@ class FileRepository(
     }
 
     suspend fun search(root: String, filters: SearchFilters, showHidden: Boolean = false): Result<List<FileItem>> = withContext(Dispatchers.IO) {
-        runCatching {
+        runCatchingCancellable {
             val start = File(root)
-            if (!start.exists()) return@runCatching emptyList()
+            if (!start.exists()) return@runCatchingCancellable emptyList()
             val found = ArrayList<FileItem>()
             start.walkTopDown()
                 .onEnter { directory -> !directory.isHidden || showHidden }
@@ -47,29 +48,41 @@ class FileRepository(
                     coroutineContext.ensureActive()
                     if (!showHidden && file.isHidden) return@forEach
                     val item = toItem(file)
-                    val queryMatches = filters.query.isBlank() || file.name.contains(filters.query, ignoreCase = true)
-                    val categoryMatches = filters.category == null || FileType.category(file.name) == filters.category
-                    val extMatches = filters.extension.isNullOrBlank() || FileType.extension(file.name) == filters.extension!!.trimStart('.').lowercase(Locale.ROOT)
-                    val minMatches = filters.minimumSize == null || file.length() >= filters.minimumSize
-                    val maxMatches = filters.maximumSize == null || file.length() <= filters.maximumSize
-                    if (queryMatches && categoryMatches && extMatches && minMatches && maxMatches) found += item
+                    if (matches(item, filters)) found += item
                 }
             found.sortedBy { it.name.lowercase(Locale.ROOT) }
         }
     }
 
-    suspend fun listSafTree(treeUri: android.net.Uri, showHidden: Boolean = false): Result<List<FileItem>> = withContext(Dispatchers.IO) {
-        runCatching {
-            val root = DocumentFile.fromTreeUri(context, treeUri)
-                ?: DocumentFile.fromSingleUri(context, treeUri)
-                ?: error("Invalid storage URI")
+    suspend fun listSafTree(treeUri: android.net.Uri, sort: SortSpec = SortSpec(), showHidden: Boolean = false): Result<List<FileItem>> = withContext(Dispatchers.IO) {
+        runCatchingCancellable {
+            val root = document(treeUri) ?: error("Invalid storage URI")
             require(root.isDirectory) { "Selected SAF item is not a directory" }
             root.listFiles().asSequence()
                 .filter { showHidden || !it.name.orEmpty().startsWith('.') }
-                .map { document ->
-                    val name = document.name.orEmpty()
-                    FileItem(name, document.uri.toString(), document.uri, document.isDirectory, document.length(), document.lastModified(), document.type ?: FileType.mimeType(name), FileType.extension(name))
-                }.sortedBy { it.name.lowercase() }.toList()
+                .map(::toSafItem)
+                .toList()
+                .sortedBySpec(sort)
+        }
+    }
+
+    suspend fun searchSafTree(treeUri: android.net.Uri, filters: SearchFilters, showHidden: Boolean = false): Result<List<FileItem>> = withContext(Dispatchers.IO) {
+        runCatchingCancellable {
+            val root = document(treeUri) ?: error("Invalid storage URI")
+            require(root.isDirectory) { "Selected SAF item is not a directory" }
+            val found = ArrayList<FileItem>()
+            suspend fun visit(directory: DocumentFile) {
+                coroutineContext.ensureActive()
+                directory.listFiles().forEach { child ->
+                    coroutineContext.ensureActive()
+                    if (!showHidden && child.name.orEmpty().startsWith('.')) return@forEach
+                    val item = toSafItem(child)
+                    if (matches(item, filters)) found += item
+                    if (child.isDirectory && found.size < 10_000) visit(child)
+                }
+            }
+            visit(root)
+            found.sortedBy { it.name.lowercase(Locale.ROOT) }
         }
     }
 
@@ -90,7 +103,24 @@ class FileRepository(
         )
     }
 
-    private fun directorySizeHint(file: File): Long = 0L
+    private fun toSafItem(document: DocumentFile): FileItem {
+        val name = document.name.orEmpty()
+        val mime = document.type ?: if (document.isDirectory) "inode/directory" else FileType.mimeType(name)
+        return FileItem(name, document.uri.toString(), document.uri, document.isDirectory, document.length().coerceAtLeast(0), document.lastModified(), mime, FileType.extension(name), name.startsWith('.'))
+    }
 
+    private fun matches(item: FileItem, filters: SearchFilters): Boolean {
+        val queryMatches = filters.query.isBlank() || item.name.contains(filters.query, ignoreCase = true)
+        val categoryMatches = filters.category == null || FileType.category(item.name, item.mimeType) == filters.category
+        val extMatches = filters.extension.isNullOrBlank() || FileType.extension(item.name) == filters.extension!!.trimStart('.').lowercase(Locale.ROOT)
+        val minMatches = filters.minimumSize == null || item.size >= filters.minimumSize
+        val maxMatches = filters.maximumSize == null || item.size <= filters.maximumSize
+        return queryMatches && categoryMatches && extMatches && minMatches && maxMatches
+    }
+
+    private fun document(uri: android.net.Uri): DocumentFile? =
+        DocumentFile.fromTreeUri(context, uri) ?: DocumentFile.fromSingleUri(context, uri)
+
+    private fun directorySizeHint(file: File): Long = 0L
     fun primaryPath(): String = Environment.getExternalStorageDirectory().absolutePath
 }

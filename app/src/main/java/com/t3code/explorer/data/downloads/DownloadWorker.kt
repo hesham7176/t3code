@@ -28,7 +28,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
 
     private suspend fun download(urlText: String, destination: File) {
         val url = URL(urlText)
-        require(url.protocol == "http" || url.protocol == "https") { "Only HTTP(S) downloads are supported" }
+        DownloadPolicy.requireSupported(url)
         val partial = File("${destination.absolutePath}.part")
         val offset = partial.length()
         val connection = (url.openConnection() as HttpURLConnection).apply {
@@ -40,17 +40,30 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         try {
             connection.connect()
             val response = connection.responseCode
+            if (response == HttpURLConnection.HTTP_REQUESTED_RANGE_NOT_SATISFIABLE && offset > 0) {
+                val total = connection.getHeaderField("Content-Range")?.substringAfter("*/")?.toLongOrNull()
+                when {
+                    total != null && offset == total -> {
+                        require(partial.renameTo(destination) || (destination.delete() && partial.renameTo(destination))) { "Could not finalize resumed download" }
+                        return
+                    }
+                    total != null && offset > total -> {
+                        partial.delete()
+                        return download(urlText, destination)
+                    }
+                }
+            }
             require(response in 200..299) { "HTTP $response" }
-            val append = offset > 0 && response == HttpURLConnection.HTTP_PARTIAL
+            val append = DownloadPolicy.shouldAppend(offset, response)
             val completedAtStart = if (append) offset else 0L
             if (!append && offset > 0) partial.delete()
             val contentLength = connection.contentLengthLong
-            val total = if (contentLength >= 0) completedAtStart + contentLength else -1L
+            val total = DownloadPolicy.totalBytes(completedAtStart, contentLength, append)
             partial.parentFile?.mkdirs()
+            var completed = completedAtStart
             FileOutputStream(partial, append).use { output ->
                 connection.inputStream.use { input ->
                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                    var completed = completedAtStart
                     var read: Int
                     while (input.read(buffer).also { read = it } >= 0) {
                         coroutineContext.ensureActive()
@@ -62,6 +75,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                     }
                 }
             }
+            require(total < 0 || completed == total) { "Download ended before the expected length" }
             require(partial.renameTo(destination) || (destination.delete() && partial.renameTo(destination))) { "Could not finalize download" }
         } finally {
             connection.disconnect()

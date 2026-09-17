@@ -1,5 +1,6 @@
 package com.t3code.explorer.media
 
+import android.app.Activity
 import android.content.Context
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -31,5 +32,7 @@ class PlaybackPositionStore(context: Context) {
 }
 
 class MediaLifecycleObserver(private val engine: MediaEngine) : DefaultLifecycleObserver {
-    override fun onDestroy(owner: LifecycleOwner) { engine.release() }
+    override fun onDestroy(owner: LifecycleOwner) {
+        if (owner !is Activity || !owner.isChangingConfigurations) engine.release()
+    }
 }

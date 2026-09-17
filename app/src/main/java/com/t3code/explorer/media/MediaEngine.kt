@@ -3,6 +3,7 @@ package com.t3code.explorer.media
 import android.content.Context
 import android.net.Uri
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +24,7 @@ class MediaEngine(context: Context) : Player.Listener {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val ticker: Job
     private val _state = MutableStateFlow(PlaybackState())
+    private var lastError: String? = null
     val state: StateFlow<PlaybackState> = _state.asStateFlow()
     val exoPlayer: ExoPlayer get() = player
 
@@ -37,27 +39,39 @@ class MediaEngine(context: Context) : Player.Listener {
     }
 
     fun setQueue(uris: List<Uri>, startIndex: Int = 0, startPosition: Long = 0L) {
-        player.setMediaItems(uris.map { MediaItem.fromUri(it) }, startIndex, startPosition)
+        lastError = null
+        if (uris.isEmpty()) {
+            player.clearMediaItems()
+            publish()
+            return
+        }
+        player.setMediaItems(uris.map { MediaItem.fromUri(it) }, startIndex.coerceIn(0, uris.lastIndex), startPosition.coerceAtLeast(0L))
         player.prepare()
         player.play()
     }
 
     fun play(uri: Uri, startPosition: Long = 0L) {
+        lastError = null
         player.setMediaItem(MediaItem.fromUri(uri), startPosition)
         player.prepare()
         player.play()
     }
 
     fun toggle() { if (player.isPlaying) player.pause() else player.play() }
+    fun setSpeed(speed: Float) { player.setPlaybackSpeed(speed.coerceIn(0.25f, 3f)); publish() }
     fun seekBy(deltaMs: Long) { player.seekTo((player.currentPosition + deltaMs).coerceAtLeast(0L)) }
     fun release() { ticker.cancel(); scope.cancel(); player.release() }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) { publish() }
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) { publish() }
     override fun onPlaybackStateChanged(playbackState: Int) { publish() }
+    override fun onPlayerError(error: PlaybackException) {
+        lastError = error.message ?: error.errorCodeName
+        publish()
+    }
 
     private fun publish() {
-        _state.value = PlaybackState(player.isPlaying, player.currentPosition, player.duration.coerceAtLeast(0), player.currentMediaItem?.localConfiguration?.uri?.toString().orEmpty())
+        _state.value = PlaybackState(player.isPlaying, player.currentPosition, player.duration.coerceAtLeast(0), player.currentMediaItem?.localConfiguration?.uri?.toString().orEmpty(), lastError, player.playbackParameters.speed)
     }
 }
 
@@ -65,5 +79,7 @@ data class PlaybackState(
     val isPlaying: Boolean = false,
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
-    val mediaId: String = ""
+    val mediaId: String = "",
+    val errorMessage: String? = null,
+    val speed: Float = 1f
 )

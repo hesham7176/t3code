@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -19,6 +20,23 @@ class ArchiveManagerTest {
         ArchiveManager().createZip(source, zip)
         ArchiveManager().extractZip(zip, destination)
         assertTrue(destination.walkTopDown().any { it.name == "hello.txt" })
+        root.deleteRecursively()
+    }
+
+    @Test fun `existing archive and extracted file use conflict-safe names`() = runTest {
+        val root = Files.createTempDirectory("archive-conflicts").toFile()
+        val source = root.resolve("source").apply { mkdirs() }
+        source.resolve("note.txt").writeText("new")
+        val archive = root.resolve("archive.zip")
+        ArchiveManager().createZip(source, archive)
+        ArchiveManager().createZip(source, archive)
+        assertTrue(root.resolve("archive (1).zip").isFile)
+        val destination = root.resolve("out").apply { mkdirs() }
+        destination.resolve("source").mkdirs()
+        destination.resolve("source/note.txt").writeText("old")
+        ArchiveManager().extractZip(archive, destination)
+        assertEquals("old", destination.resolve("source/note.txt").readText())
+        assertEquals("new", destination.resolve("source/note (1).txt").readText())
         root.deleteRecursively()
     }
 

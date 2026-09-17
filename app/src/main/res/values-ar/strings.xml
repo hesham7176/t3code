@@ -92,7 +92,6 @@
     <string name="restored">تمت الاستعادة</string>
     <string name="recycle_bin_emptied">تم إفراغ سلة المحذوفات</string>
     <string name="saf_operation_unavailable">هذه العملية غير متاحة لموقع التخزين المحدد عبر SAF.</string>
-    <string name="saf_search_unavailable">البحث داخل مواقع SAF غير متاح حاليًا.</string>
     <string name="saf_permission_not_persisted">تعذر حفظ صلاحية التخزين؛ قد ينتهي الوصول عند إغلاق التطبيق.</string>
     <string name="file_deleted">تم النقل إلى سلة المحذوفات</string>
     <string name="confirm_delete">هل تريد نقل العناصر المحددة إلى سلة المحذوفات؟</string>

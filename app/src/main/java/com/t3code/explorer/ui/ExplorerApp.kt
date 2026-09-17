@@ -50,6 +50,7 @@ fun ExplorerApp(viewModel: ExplorerViewModel) {
     val snackbar = remember { SnackbarHostState() }
     var destination by rememberSaveable { mutableStateOf(Destination.HOME) }
     var mediaPath by rememberSaveable { mutableStateOf("") }
+    var mediaMimeType by rememberSaveable { mutableStateOf("") }
     var mediaIsVideo by rememberSaveable { mutableStateOf(false) }
     var textPath by rememberSaveable { mutableStateOf("") }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
@@ -95,20 +96,21 @@ fun ExplorerApp(viewModel: ExplorerViewModel) {
                         destination = Destination.TEXT_EDITOR
                     } else {
                         mediaPath = item.path
+                        mediaMimeType = item.mimeType
                         mediaIsVideo = item.mimeType.startsWith("video/")
                         destination = Destination.MEDIA
                     }
                 }, onSearch = { destination = Destination.SEARCH })
                 Destination.SEARCH -> SearchScreen(state, padding, viewModel, onOpenMedia = { item ->
                     if (FileType.isText(item.path)) { textPath = item.path; destination = Destination.TEXT_EDITOR }
-                    else { mediaPath = item.path; mediaIsVideo = item.mimeType.startsWith("video/"); destination = Destination.MEDIA }
+                    else { mediaPath = item.path; mediaMimeType = item.mimeType; mediaIsVideo = item.mimeType.startsWith("video/"); destination = Destination.MEDIA }
                 })
                 Destination.SETTINGS -> SettingsScreen(state, padding, viewModel, onOpenStorageSettings = { destination = Destination.ANALYZER; viewModel.analyzeStorage() }, onOpenRecycleBin = { viewModel.loadRecycleBin(); destination = Destination.RECYCLE_BIN }, onOpenAppManager = { destination = Destination.APP_MANAGER })
                 Destination.ANALYZER -> AnalyzerScreen(state.analysis, state.isAnalyzing, padding)
                 Destination.RECYCLE_BIN -> RecycleBinScreen(state, padding, viewModel)
                 Destination.APP_MANAGER -> AppManagerScreen(padding)
                 Destination.TEXT_EDITOR -> TextEditorScreen(textPath, padding, onBack = { destination = Destination.BROWSE })
-                Destination.MEDIA -> MediaScreen(state, mediaPath, mediaIsVideo, onBack = { destination = Destination.BROWSE })
+                Destination.MEDIA -> MediaScreen(state, mediaPath, mediaIsVideo, mediaMimeType, onBack = { destination = Destination.BROWSE })
             }
         }
     }

@@ -103,6 +103,7 @@ fun BrowserScreen(
     var renameTarget by remember { mutableStateOf<FileItem?>(null) }
     var propertiesTarget by remember { mutableStateOf<FileItem?>(null) }
     val safLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let(viewModel::openSafTree) }
+    val safTransferLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> uri?.let { viewModel.transferSelected(it.toString(), transferMove) } }
 
     Column(Modifier.fillMaxSize().padding(padding)) {
         TopAppBar(
@@ -112,8 +113,14 @@ fun BrowserScreen(
             },
             actions = {
                 if (state.selected.isNotEmpty()) {
-                    IconButton(onClick = { transferMove = false; showTransfer = true }) { Icon(Icons.Default.Description, stringResource(R.string.copy)) }
-                    IconButton(onClick = { transferMove = true; showTransfer = true }) { Icon(Icons.Default.Folder, stringResource(R.string.move)) }
+                    IconButton(onClick = {
+                        transferMove = false
+                        if (state.currentPath.startsWith("content:")) safTransferLauncher.launch(null) else showTransfer = true
+                    }) { Icon(Icons.Default.Description, stringResource(R.string.copy)) }
+                    IconButton(onClick = {
+                        transferMove = true
+                        if (state.currentPath.startsWith("content:")) safTransferLauncher.launch(null) else showTransfer = true
+                    }) { Icon(Icons.Default.Folder, stringResource(R.string.move)) }
                     IconButton(onClick = { showDelete = true }) { Icon(Icons.Default.Delete, stringResource(R.string.delete)) }
                     IconButton(onClick = viewModel::clearSelection) { Icon(Icons.Default.Close, stringResource(R.string.cancel)) }
                 } else {

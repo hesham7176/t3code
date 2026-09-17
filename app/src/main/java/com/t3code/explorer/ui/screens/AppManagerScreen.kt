@@ -2,6 +2,7 @@ package com.t3code.explorer.ui.screens
 
 import android.content.Intent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -33,10 +34,14 @@ fun AppManagerScreen(padding: PaddingValues) {
     val context = LocalContext.current
     val repository = remember { ApplicationRepository(context) }
     var apps by remember { mutableStateOf<List<InstalledApp>>(emptyList()) }
-    LaunchedEffect(Unit) { apps = repository.list() }
-    LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(12.dp)) {
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { repository.list().fold({ apps = it }, { error = it.message }) }
+    Column(Modifier.fillMaxSize().padding(padding)) {
+        if (error != null) Text(error.orEmpty(), color = androidx.compose.material3.MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
         items(apps, key = { it.packageName }) { app ->
             ListItem(headlineContent = { Text(app.label) }, supportingContent = { Text("${app.packageName} • ${app.versionName} • ${app.apkSize.readableFileSize()}") }, leadingContent = { AndroidView(factory = { android.widget.ImageView(it) }, update = { imageView -> imageView.setImageDrawable(app.icon) }) }, modifier = Modifier.clickable { app.launchIntent?.let(context::startActivity) })
+        }
         }
     }
 }

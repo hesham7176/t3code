@@ -22,4 +22,11 @@ class FolderCoverResolverTest {
         assertEquals("a.jpg", FolderCoverResolver().resolve(dir)?.name)
         dir.deleteRecursively()
     }
+
+    @Test fun `unsupported image extension is not used as folder cover`() {
+        val dir = Files.createTempDirectory("covers").toFile()
+        dir.resolve("animated.gif").writeText("")
+        assertEquals(null, FolderCoverResolver().resolve(dir))
+        dir.deleteRecursively()
+    }
 }

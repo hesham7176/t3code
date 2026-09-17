@@ -57,7 +57,12 @@ data class OperationProgress(
     val isComplete: Boolean = false,
     val error: String? = null
 ) {
-    val percent: Int get() = if (totalBytes <= 0) 0 else ((completedBytes * 100) / totalBytes).toInt().coerceIn(0, 100)
+    val percent: Int
+        get() = when {
+            totalBytes > 0 -> ((completedBytes * 100) / totalBytes).toInt().coerceIn(0, 100)
+            isComplete -> 100
+            else -> 0
+        }
 }
 
 data class SearchFilters(

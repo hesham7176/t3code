@@ -57,7 +57,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(currentPath = path, isLoading = true, error = null, selected = emptySet()) }
         directoryJob?.cancel()
         directoryJob = viewModelScope.launch {
-            val result = if (path.startsWith("content:")) app.files.listSafTree(Uri.parse(path), _uiState.value.preferences.showHidden) else app.files.list(path, _uiState.value.preferences.toSortSpec(), _uiState.value.preferences.showHidden)
+            val result = if (path.startsWith("content:")) app.files.listSafTree(Uri.parse(path), _uiState.value.preferences.toSortSpec(), _uiState.value.preferences.showHidden) else app.files.list(path, _uiState.value.preferences.toSortSpec(), _uiState.value.preferences.showHidden)
             result.fold(
                 onSuccess = { items -> _uiState.update { it.copy(items = items, isLoading = false) } },
                 onFailure = { error -> _uiState.update { it.copy(items = emptyList(), isLoading = false, error = error.message ?: app.getString(R.string.operation_failed)) } }
@@ -144,10 +144,25 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun transferSelected(destination: String, move: Boolean) = viewModelScope.launch {
-        if (isSafPath()) { showMessage(R.string.saf_operation_unavailable); return@launch }
         val items = _uiState.value.items.filter { it.path in _uiState.value.selected }
-        if (items.any { it.path.startsWith("content:") }) { showMessage(R.string.saf_operation_unavailable); return@launch }
-        val result = if (move) app.operations.move(items, java.io.File(destination)) else app.operations.copy(items, java.io.File(destination))
+        val result = if (isSafPath()) {
+            if (!destination.startsWith("content:")) {
+                showMessage(R.string.saf_operation_unavailable)
+                return@launch
+            }
+            val uris = items.mapNotNull { it.uri ?: Uri.parse(it.path).takeIf { uri -> uri.scheme == "content" } }
+            if (uris.size != items.size) {
+                showMessage(R.string.saf_operation_unavailable)
+                return@launch
+            }
+            if (move) app.saf.move(uris, Uri.parse(destination)) else app.saf.copy(uris, Uri.parse(destination))
+        } else {
+            if (items.any { it.path.startsWith("content:") }) {
+                showMessage(R.string.saf_operation_unavailable)
+                return@launch
+            }
+            if (move) app.operations.move(items, java.io.File(destination)) else app.operations.copy(items, java.io.File(destination))
+        }
         result.fold({ showMessage(if (move) R.string.moved else R.string.copied) }, ::showError)
         clearSelection()
         loadDirectory()
@@ -167,13 +182,13 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
 
     fun search(query: String) {
         searchJob?.cancel()
-        if (_uiState.value.currentPath.startsWith("content:")) {
-            _uiState.update { it.copy(searchQuery = query, searchResults = emptyList(), isSearching = false, error = app.getString(R.string.saf_search_unavailable)) }
-            return
-        }
         _uiState.update { it.copy(searchQuery = query, isSearching = true, error = null) }
         searchJob = viewModelScope.launch {
-            val result = app.files.search(_uiState.value.currentPath, SearchFilters(query), _uiState.value.preferences.showHidden)
+            val result = if (_uiState.value.currentPath.startsWith("content:")) {
+                app.files.searchSafTree(Uri.parse(_uiState.value.currentPath), SearchFilters(query), _uiState.value.preferences.showHidden)
+            } else {
+                app.files.search(_uiState.value.currentPath, SearchFilters(query), _uiState.value.preferences.showHidden)
+            }
             _uiState.update { it.copy(searchResults = result.getOrDefault(emptyList()), isSearching = false, error = result.exceptionOrNull()?.message) }
         }
     }
