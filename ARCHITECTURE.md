@@ -2,31 +2,39 @@
 
 ## الطبقات
 
-- `data`: الوصول إلى الملفات والتخزين والتفضيلات والتحميلات.
-- `domain`: نماذج مستقلة، فرز، أغلفة المجلدات، الأرشيف، سياسة الإيماءات.
-- `media`: محرك Media3 وMetadata وthumbnail loader وخدمة MediaSession.
-- `ui`: شاشات Compose وViewModel وحالة موحدة.
+- `data`: الملفات وSAF والتفضيلات والتنزيلات والتحليل والتطبيقات.
+- `domain`: نماذج مستقلة، الفرز، أنواع الملفات، Folder Covers، ZIP، سياسات الأمان والإيماءات.
+- `media`: Media3/ExoPlayer وMediaSession وmetadata وthumbnails وحفظ موضع التشغيل.
+- `ui`: Compose screens وViewModel وStateFlow والتنقل والحالة.
 
-## تدفق التصفح
+## التصفح والـSAF
 
-`ExplorerViewModel` يطلب البيانات من `FileRepository` في `Dispatchers.IO`، ثم يعرض `StateFlow` غير قابل للتعديل. لا توجد عمليات I/O داخل Composable. Jobs البحث والتحليل والتصفح تُلغى عند بدء عملية أحدث.
+`ExplorerViewModel` يختار بين `FileRepository` للتخزين المحلي و`DocumentFile` داخل `FileRepository` و`SafStorageRepository` لمواقع SAF. URI لا يمر إلى `java.io.File`. توجد صلاحيات persisted tree، وتدعم SAF القراءة والفرز والبحث وإنشاء الملف/المجلد وإعادة التسمية والنسخ والنقل عبر streams.
 
-## أغلفة المجلدات والصور المصغرة
+الحذف من SAF غير مفعّل لأنه لا يمر عبر سلة المحذوفات. تعرض العمليات غير المدعومة حالة خطأ واضحة بدل نجاح وهمي.
 
-`FolderCoverResolver` يبحث محليًا بالترتيب `cover` ثم `poster` ثم `folder`، ثم يختار أول صورة مناسبة كبديل. لا يوجد فحص عودي عند فتح كل بطاقة. `ThumbnailProvider` يهيئ Coil مع VideoFrameDecoder وMemory/Disk Cache محدودين، وتستخدمه بطاقات الملفات.
+## العمليات المحلية
 
-## العمليات الخطرة
-
-`FileOperationManager` ينفذ النسخ والنقل في الخلفية مع تعارضات آمنة وإشارات تقدم، ويمنع نسخ/نقل المجلد إلى نفسه. الحذف المحلي ينقل العنصر إلى مجلد سلة المحذوفات مع حفظ المسار الأصلي بترميز آمن. SAF يعرض القراءة، بينما العمليات غير المدعومة تعرض رسالة واضحة بدل تنفيذ حذف دائم صامت.
+`FileOperationManager` ينفذ النسخ والنقل recursive على `Dispatchers.IO`، مع conflict-safe names، canonical containment checks، progress، cancellation checks، وسلة محذوفات تحفظ المسار الأصلي بترميز آمن. يتم إعادة رمي `CancellationException` بدل تحويل الإلغاء إلى فشل عادي مضلل.
 
 ## الوسائط
 
-`MediaEngine` يغلف ExoPlayer ويحتفظ بحالة التشغيل والموضع وقائمة التشغيل. `MediaScreen` يوفر عارض صور قابلًا للتكبير والسحب، معرضًا أفقيًا، فيديو، صوتًا، إيماءات، وملء الشاشة. توجد `ExplorerPlaybackService` كبنية MediaSession، لكن ربطها بمحرك الواجهة والتحقق من إشعار الخلفية يحتاج جهازًا فعليًا.
+`MediaEngine` يغلف ExoPlayer، queue، resume position، seek، speed، state، وأخطاء التشغيل. `MediaScreen` يوفر فيديو وصوتًا وصورًا وzoom/pan وgallery وfullscreen واتجاهًا وإيماءات مقفلة الاتجاه بعد touch slop.
 
-## الشبكة والسحابة
+`ExplorerPlaybackService` و`MediaSession` موجودان، لكن ربط محرك الواجهة بالخدمة والإشعار والتحقق من شاشة القفل يحتاجان اختبار جهاز فعلي؛ لذلك الحالة PARTIAL وليست DONE.
 
-`RemoteFileSystem` و`CloudProvider` عقود توسعة فقط. لا يوجد مزود SMB أو FTP أو WebDAV أو OAuth فعلي في هذا الإصدار، ولا تُعرض هذه المزايا على أنها مكتملة.
+## Folder Covers وZIP
+
+`FolderCoverResolver` يحافظ على الأولوية `cover` ثم `poster` ثم `folder`، ويتحقق من jpg/jpeg/png/webp مع fallback وcache. `ArchiveManager` ينشئ ويفك ZIP عبر ملف مؤقت، ويدعم conflict-safe extraction ويحمي canonical destination من Zip Slip.
+
+## التحليل والتنزيل والنصوص
+
+`StorageAnalyzer` يحسب الأحجام recursive حسب الفئة مع progress وإلغاء. `DownloadWorker` يستخدم WorkManager وملف `.part` وHTTP Range وretry وatomic finalization ويمنع FTP/البروتوكولات غير HTTP(S). محرر النصوص يفرض UTF-8 strict، حد 5 MB، حفظًا ذريًا محليًا ومسارات SAF عبر ContentResolver.
+
+## View on PC والشبكات
+
+`ViewOnPcServer` خادم قراءة فقط محمي بتوكن، مع canonical path checks وHTML escaping و401/403/404 وshutdown. لا يوجد upload. `RemoteFileSystem` و`CloudProvider` عقود فقط؛ SMB وFTP وWebDAV وCloud OAuth ليست providers فعلية.
 
 ## التحقق
 
-التفاصيل الدقيقة في `TESTING.md` و`IMPLEMENTATION_STATUS.md`. آخر Build/Lint/Unit Test ناجح في CI هو run `34797004649`، وmetadata الـAPK في run `34797339729`.
+التفاصيل في `IMPLEMENTATION_STATUS.md` و`TESTING.md`. آخر تحقق نظيف مؤكد هو run `35278719183`، وAPK metadata في run `35279113727`.

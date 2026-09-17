@@ -1,17 +1,10 @@
 # Testing and verification
 
-## التحقق الآلي الناجح
+## التحقق المؤكد
 
-تم تشغيل التحقق على GitHub Actions لأن بيئة Arena المحلية لا تحتوي Java أو Android SDK.
+آخر تحقق نظيف للكود هو GitHub Actions run `35278719183` على commit التطبيق `e82ee10140351951befd545516bc4245983c96bb`.
 
-- Run النظيف: `34797004649`
-- Run metadata للـAPK: `34797339729`
-- كود التطبيق: `b334c82ed65aa323f9c3169140e18a0077156f4b`
-- JDK: Temurin `17.0.20.1`
-- Gradle: `8.7`
-- Android SDK: Platform `35` وBuild Tools `35.0.0`
-
-الأوامر شُغّلت كخطوات منفصلة:
+تم تشغيل الأوامر كخطوات منفصلة:
 
 ```bash
 ./gradlew testDebugUnitTest --stacktrace --console=plain
@@ -19,51 +12,52 @@
 ./gradlew assembleDebug --stacktrace --console=plain
 ```
 
-النتيجة:
+النتائج:
 
 | الأمر | النتيجة |
 |---|---|
-| `testDebugUnitTest` | ناجح |
-| `lintDebug` | ناجح |
-| `assembleDebug` | ناجح |
+| `testDebugUnitTest` | PASS |
+| `lintDebug` | PASS |
+| `assembleDebug` | PASS |
 
-عدد الاختبارات: **12 ناجحة، 0 فاشلة، 0 أخطاء، 0 متخطاة**.
+عدد الاختبارات: **29 ناجحة، 0 فاشلة، 0 أخطاء، 0 متخطاة**.
 
-## الاختبارات الموجودة
+## الاختبارات ذات المعنى
 
-- تصنيف الامتدادات والـ MIME.
-- فرز المجلدات والملفات في الاتجاهين.
-- أولوية `cover` ثم `poster` ثم `folder` وFallback.
-- إنشاء ZIP وفكّه.
-- رفض مسارات Zip Slip.
-- عتبات واتجاهات إيماءات الفيديو.
-- اختبار إطلاق Activity موجود في `androidTest` لكنه لم يُشغّل لعدم وجود جهاز أو محاكي.
+- تصنيف امتدادات وأنواع الصور والفيديو والصوت والأرشيف.
+- فرز الملفات والمجلدات بالاسم والحجم والاتجاه.
+- أولوية `cover` ثم `poster` ثم `folder` وfallback وعدم قبول GIF كغلاف.
+- ZIP round-trip وZip Slip وconflict-safe archive/extraction.
+- سياسة أسماء الملفات ومنع escape وconflict handling.
+- progress لعملية صفرية مكتملة.
+- Gesture touch slop والتمييز بين horizontal/vertical والقطرية الغامضة.
+- Storage Analyzer للأحجام recursive والفئات وprogress والجذر المفقود.
+- UTF-8 strict read/write ورفض bytes غير صالحة وحد الحجم.
+- Recycle metadata مع Unicode وseparator وlegacy fallback.
+- HTTP/HTTPS وRange resume policy للتنزيلات.
 
-## فحوصات المصدر
+## التغطية التي لم تُدّعَ
 
-تم تشغيل:
+- لا توجد Unit Tests كاملة لـDocumentFile provider؛ تحتاج fake provider أو جهاز/اختبار instrumentation.
+- لا توجد Unit Tests لـMedia3 الفعلي أو MediaSession notification.
+- لا توجد UI tests للشاشات الرئيسية.
+- `LaunchTest` موجود في `androidTest` لكنه لم يُشغّل.
 
-```bash
-git diff --check
-```
+## اختبار الجهاز
 
-كما تم فحص:
+لم يتم تشغيل Android Emulator أو جهاز حقيقي. لذلك لم يتم التحقق فعليًا من:
 
-- موارد strings العربية والإنجليزية وعدم وجود مراجع مفقودة.
-- Version Catalog بصيغة TOML.
-- حالات `Result` وعمليات الاستعادة.
-- حماية مسارات النسخ وفك الأرشيف.
-- إلغاء Jobs الخاصة بالبحث والتحليل والتصفح.
-- تحرير موارد View on PC.
+- USB OTG وبطاقة SD.
+- SAF providers الخاصة بالمصنعين.
+- تشغيل الفيديو والصوت والإشعارات وشاشة القفل.
+- الدوران والسطوع ومستوى الصوت والإيماءات على جهاز.
+- View on PC من جهاز كمبيوتر.
+- الأداء على آلاف الملفات.
 
-## ما لم يُتحقق منه
+## الشبكة والسحابة
 
-- تشغيل APK على جهاز Android حقيقي.
-- تشغيل Emulator أو Instrumentation Tests.
-- USB OTG وبطاقات SD الحقيقية.
-- إشعار MediaSession وشاشة القفل.
-- endpoint حقيقي لـ SMB/FTP/WebDAV أو Cloud OAuth.
-- benchmark على مجلد يحوي آلاف الملفات.
-- endpoint تنزيل حقيقي مع انقطاع واستئناف.
+SMB وFTP وWebDAV وCloud ما زالت عقودًا بلا providers حقيقية، ولذلك لا توجد integration tests أو authentication tests لها.
 
-لذلك لا يُعد المشروع Production Ready من منظور اختبار الأجهزة والتكاملات الخارجية، حتى مع نجاح build وlint وunit tests.
+## البيئة المحلية
+
+محليًا يفشل `./gradlew --version` وGradle قبل البدء لأن `java` غير موجود، لذلك تم تنفيذ التحقق الفعلي في GitHub Actions مع JDK 17 وAndroid SDK 35.

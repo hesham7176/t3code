@@ -1,47 +1,66 @@
-# Implementation status
+# حالة التنفيذ والتحقق
 
-آخر تحقق موثق:
+آخر تحقق فعلي للكود:
 
-- كود التطبيق المتحقق: `b334c82ed65aa323f9c3169140e18a0077156f4b`
-- الفرع النهائي: `arena/01a09d45-t3code`
-- CI run النظيف: `34797004649`
-- CI run الذي التقط metadata للـAPK: `34797339729` (نفس كود التطبيق، مع خطوة تشخيص مؤقتة أزيلت لاحقًا)
-- النتيجة: نجاح
+- الفرع: `arena/01a09d45-t3code`
+- commit كود التطبيق المتحقق: `e82ee10140351951befd545516bc4245983c96bb`
+- CI نظيف للكود: `35278719183` — نجاح
+- run metadata للـAPK: `35279113727` — نجاح، بنفس كود التطبيق مع خطوة metadata مؤقتة أزيلت لاحقًا
 - Gradle: `8.7`
 - JDK: `Temurin 17.0.20.1`
-- Android SDK platform: `android-35`
-- Build Tools المستخدمة: `35.0.0`
-- الاختبارات: `12` ناجحة، `0` فاشلة، `0` أخطاء، `0` متخطاة
+- Android SDK: Platform 35 وBuild Tools 35.0.0
+- الاختبارات: **29 ناجحة، 0 فاشلة، 0 أخطاء، 0 متخطاة**
 - Lint: ناجح
 - assembleDebug: ناجح
 - APK: `app/build/outputs/apk/debug/app-debug.apk`
-- حجم APK في CI: `23,986,603` بايت
-- SHA-256: `f959561226ba5c4e1afa719f5adbe2061493c1ea399013874134d12f140b1dc4`
+- حجم APK: `24,018,899` بايت
+- SHA-256: `9a463bea5f3e212370439aeebb8cd0f63c008d86715551a8e42556045aaeffd9`
 
-## نموذج الحالة
+## معنى الحالات
 
-- **DONE**: تنفيذ مدمج، الاختبار المناسب ناجح، والبناء والتحقق الآلي ناجحان.
-- **PARTIAL**: توجد وظيفة حقيقية مدمجة، لكن اختبار الجهاز أو جزء مهم من الوظيفة لم يكتمل.
-- **BLOCKED**: الكود جاهز نسبيًا لكن تحقق خارجي مثل جهاز أو endpoint يمنع الإكمال.
-- **NOT STARTED**: لا توجد وظيفة حقيقية كافية.
+كل صف في المصفوفة يستخدم حالة واحدة فقط:
 
-## الحالة المختصرة
+- **DONE**: نطاق محدد ومطبق فعليًا، مع اختبار مناسب ونجاح Lint وBuild. لا يعني ذلك اختبار جهاز إذا كان العمود يوضح غير ذلك.
+- **PARTIAL**: جزء حقيقي يعمل، لكن نطاقًا مهمًا أو اختبار تكامل/UI ما زال ناقصًا.
+- **BLOCKED**: لا يمكن إكمال التحقق أو التكامل بسبب جهاز أو خدمة خارجية غير متاحة.
+- **NOT STARTED**: لا يوجد تنفيذ فعلي كافٍ، أو الموجود مجرد عقد/واجهة.
 
-| المجال | الحالة | السبب |
-|---|---|---|
-| أساس Android وGradle وCompose وRTL | DONE | Build وLint وUnit Tests ناجحة في CI |
-| نماذج الملفات والفرز والأنواع | DONE | اختبارات منطقية ناجحة |
-| Folder Cover Resolver | DONE | أولوية الأغلفة وFallback وUnit Tests |
-| ZIP وحماية Zip Slip | DONE | اختبارات round-trip وZip Slip ناجحة |
-| VideoGestureDecider | DONE | اختبارات الاتجاه والعتبات ناجحة |
-| الشاشة الرئيسية ومدير الملفات | PARTIAL | مدمجان، لكن لا يوجد اختبار UI أو جهاز فعلي |
-| العمليات المحلية وسلة المحذوفات | PARTIAL | تنفيذ حقيقي، تغطية اختبارات العمليات والجهاز ناقصة |
-| SAF وUSB وSD | PARTIAL/BLOCKED | القراءة والاختيار موجودان؛ لا يوجد جهاز USB/SD للتحقق |
-| Media3 والفيديو والصوت | PARTIAL/BLOCKED | المحرك والواجهة موجودان؛ التشغيل الفعلي وإشعار الخلفية يحتاجان جهازًا |
-| البحث والتحليل | PARTIAL | تنفيذ Coroutine حقيقي، لا يوجد benchmark على تخزين كبير |
-| محرر النصوص ومدير التطبيقات | PARTIAL | مدمجان، بلا اختبار UI فعلي |
-| WorkManager Downloads | PARTIAL | Worker وطابور موجودان، لا يوجد endpoint اختبار |
-| SMB وFTP وWebDAV | NOT STARTED كمزودات فعلية | Architecture only |
-| Cloud Storage | NOT STARTED كمزود فعلي | Contract only، لا يوجد OAuth/provider |
-| View on PC | PARTIAL | خادم مؤقت محلي موجود، لا يوجد اختبار من جهاز PC |
-| Instrumentation وDevice Test | BLOCKED | لا يوجد Android device/emulator في بيئة التنفيذ |
+## Verification Matrix
+
+| Feature | Source Implementation | Unit Tests | Lint | Build | UI Test | Device Test | Status |
+|---|---|---:|---:|---:|---:|---:|---|
+| Android/Gradle/Compose/Material 3 | مدمج | 29 | PASS | PASS | لا | لا | DONE |
+| RTL والعربية والإنجليزية والثيمات | موارد وتطبيق Theme مدمج | جزئي | PASS | PASS | لا | لا | PARTIAL |
+| File models/types/sorting | مدمج | PASS | PASS | PASS | N/A | N/A | DONE |
+| Folder covers: cover ثم poster ثم folder | Resolver وcache وfallback مدمجة | PASS | PASS | PASS | لا | لا | DONE |
+| Thumbnail loader للصور والفيديو | Coil وVideoFrameDecoder وcache مدمجة | لا | PASS | PASS | لا | لا | PARTIAL |
+| Local browse/navigation/search | Repository وViewModel وCompose مدمجة | جزئي | PASS | PASS | لا | لا | PARTIAL |
+| Local copy/move/rename/conflicts | تنفيذ recursive وconflict-safe مدمج | سياسة فقط | PASS | PASS | لا | لا | PARTIAL |
+| Local delete/recycle/restore | نقل إلى bin وmetadata وrestore مدمج | codec فقط | PASS | PASS | لا | لا | PARTIAL |
+| SAF browse/persisted URI | DocumentFile وURI state مدمجان | لا | PASS | PASS | لا | لا | PARTIAL |
+| SAF create/rename/copy/move/search | DocumentFile وstream transfer مدمجان | لا | PASS | PASS | لا | لا | PARTIAL |
+| SAF delete إلى recycle bin | غير مطبق لتجنب حذف دائم مضلل | لا | PASS | PASS | لا | لا | NOT STARTED |
+| Media3 local player/queue/seek/resume | ExoPlayer ومحرك مستقل مدمجان | لا | PASS | PASS | لا | لا | PARTIAL |
+| Gesture arbitration والـtouch slop | سياسة واتجاه locking واختبارات مدمجة | PASS | PASS | PASS | لا | لا | PARTIAL |
+| Fullscreen/orientation/volume/brightness | مدمج في واجهة الفيديو | لا | PASS | PASS | لا | لا | PARTIAL |
+| Audio MediaSession/background notification | Service وMediaSession موجودان، لكن UI engine غير موصول بهما بالكامل | لا | PASS | PASS | لا | لا | PARTIAL |
+| Image viewer zoom/pan/sequential gallery | HorizontalPager وtransform gestures مدمجان | لا | PASS | PASS | لا | لا | PARTIAL |
+| Folder image share/delete/properties داخل viewer | بعض الأفعال متاحة من Browser فقط | لا | PASS | PASS | لا | لا | PARTIAL |
+| USB/SD discovery | StorageVolume وexternal dirs architecture موجودة | لا | PASS | PASS | لا | لا | PARTIAL |
+| USB/SD physical operation verification | لا يوجد جهاز فعلي في البيئة | لا | N/A | N/A | لا | لا | BLOCKED |
+| Storage analyzer recursive categories | recursive sizes وcategories وprogress مدمجة | PASS | PASS | PASS | لا | لا | PARTIAL |
+| ZIP list/create/extract/Zip Slip/conflicts | ZIP فعلي وحماية ومسارات آمنة مدمجة | PASS | PASS | PASS | لا | لا | PARTIAL |
+| WorkManager download/resume/retry | `.part` وRange وatomic finalization مدمجة | Policy فقط | PASS | PASS | لا | لا | PARTIAL |
+| View on PC read-only server | token auth وlisting وpath checks وlifecycle مدمجة | لا | PASS | PASS | لا | لا | PARTIAL |
+| Text editor UTF-8/local/SAF/size limit | UTF-8 strict وatomic local وSAF stream مدمجة | PASS | PASS | PASS | لا | لا | PARTIAL |
+| Application manager | listing/launch/details مع graceful package failures | لا | PASS | PASS | لا | لا | PARTIAL |
+| SMB | عقد `RemoteFileSystem` فقط، بلا provider | لا | PASS | PASS | لا | لا | NOT STARTED |
+| FTP | عقد `RemoteFileSystem` فقط، بلا provider | لا | PASS | PASS | لا | لا | NOT STARTED |
+| WebDAV | عقد `RemoteFileSystem` فقط، بلا provider | لا | PASS | PASS | لا | لا | NOT STARTED |
+| Cloud/OAuth | عقد `CloudProvider` فقط، بلا authentication/provider | لا | PASS | PASS | لا | لا | NOT STARTED |
+| Tabs/windows | لا يوجد UI state وسلوك tabs كامل | لا | PASS | PASS | لا | لا | NOT STARTED |
+| Instrumentation/device smoke test | `LaunchTest` موجود لكنه لم يُشغل | لا | N/A | N/A | لا | لا | BLOCKED |
+
+## خلاصة صريحة
+
+نجاح Unit Tests وLint وAPK لا يساوي اختبارًا على جهاز حقيقي ولا يثبت تكامل SMB/FTP/WebDAV/Cloud. لا يوجد ادعاء بأن التطبيق Production Ready.

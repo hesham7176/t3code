@@ -1,29 +1,31 @@
 # خطة التنفيذ المرحلية
 
-## المنجز والمتحقق آليًا
+## مكتمل ومتحقق آليًا
 
-- [x] مشروع Android وGradle Wrapper وCompose وMaterial 3.
-- [x] Manifest وFileProvider وموارد العربية والإنجليزية.
-- [x] طبقات `data/domain/media/ui`.
-- [x] الشاشة الرئيسية ومدير الملفات والفرز وطرق العرض.
-- [x] Folder Cover وthumbnail cache.
-- [x] عمليات التخزين المحلي وسلة المحذوفات وخصائص الملفات.
-- [x] Media3 للفيديو والصوت والصور، queue، resume، gesture policy.
-- [x] ZIP مع حماية Zip Slip.
-- [x] Storage Analyzer والبحث ومحرر النصوص ومدير التطبيقات.
-- [x] WorkManager Download Worker وخادم View on PC.
-- [x] RTL والعربية والإنجليزية وDark Mode.
-- [x] 12 Unit Tests وLint وassembleDebug في CI.
+- [x] Android/Gradle/Compose/Material 3 وRTL واللغات.
+- [x] طبقات UI وViewModel وData وDomain وMedia.
+- [x] التصفح المحلي والفرز والبحث الأساسي.
+- [x] Folder Cover بالترتيب cover ثم poster ثم folder وfallback/cache.
+- [x] ZIP مع Zip Slip protection وconflict-safe extraction.
+- [x] Media3 queue/resume/seek وgesture arbitration الأساسية.
+- [x] عمليات التخزين المحلي مع conflict handling وrecycle metadata.
+- [x] SAF browse/create/rename/search/copy/move عبر DocumentFile.
+- [x] WorkManager download worker مع `.part` وRange وretry.
+- [x] UTF-8 text repository مع حماية الحجم وحفظ ذري محلي.
+- [x] 29 Unit Tests وLint وassembleDebug في CI.
 
-## ما يحتاج تحققًا خارجيًا
+## الخطوات المتبقية
 
-- [ ] تشغيل Instrumentation وsmoke flows على Emulator.
-- [ ] USB OTG وSD حقيقيان: mount، SAF، صلاحيات، قراءة وعمليات كبيرة.
-- [ ] تشغيل فيديو/صوت فعلي وإشعار MediaSession وشاشة القفل.
-- [ ] اختبار دوران الشاشة وملء الشاشة والسطوع والصوت على جهاز.
-- [ ] benchmark لمجلدات ضخمة وصور/فيديوهات كثيرة.
-- [ ] endpoint تنزيل حقيقي مع timeout وإعادة المحاولة.
-- [ ] مزود SMB/FTP/WebDAV فعلي مع authentication.
-- [ ] Cloud OAuth/provider فعلي.
+- [ ] اختبار Instrumentation وsmoke flows على Emulator أو جهاز.
+- [ ] اختبار USB OTG وSD الحقيقيين، بما في ذلك الصلاحيات والعمليات الكبيرة.
+- [ ] إكمال حذف SAF الآمن عبر استراتيجية قابلة للاستعادة، لا حذفًا دائمًا صامتًا.
+- [ ] ربط MediaEngine بMediaSession service والتحقق من notification وشاشة القفل.
+- [ ] اختبار الفيديو والصوت والصور والدوران والسطوع والصوت على جهاز.
+- [ ] اختبار مجلدات ضخمة وbenchmark للـthumbnail/search/analyzer.
+- [ ] اختبار endpoint تنزيل حقيقي مع انقطاع واستئناف وتلف جزئي.
+- [ ] تنفيذ SMB/FTP/WebDAV providers حقيقية مع authentication واختبارات integration.
+- [ ] تنفيذ Cloud OAuth/provider حقيقي.
+- [ ] تنفيذ Tabs/Windows فعليًا.
+- [ ] إضافة UI tests وaccessibility tests للشاشات الرئيسية.
 
-الحالة التفصيلية والتصنيف الرسمي في `IMPLEMENTATION_STATUS.md`.
+لا توجد إشارة إلى Production Ready قبل إكمال الاختبارات والتكاملات أعلاه. التصنيف الرسمي في `IMPLEMENTATION_STATUS.md`.
