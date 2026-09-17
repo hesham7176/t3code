@@ -10,10 +10,10 @@
 - `./gradlew lintDebug` — ناجح.
 - `./gradlew assembleDebug` — ناجح.
 - Gradle 8.7 وJDK 17.0.20.1 وAndroid SDK 35.
-- CI run: `35278719183`.
+- CI run: `35280160901`.
 - APK: `app/build/outputs/apk/debug/app-debug.apk`.
 - حجم APK: `24,018,899` بايت.
-- SHA-256: `9a463bea5f3e212370439aeebb8cd0f63c008d86715551a8e42556045aaeffd9`.
+- SHA-256: `4002cedbde51987d005a2e1597c2139dc70907b03b94b0e596f57363566c73ae`.
 
 هذا تحقق آلي فقط. لم يتم تشغيل التطبيق على جهاز Android فعلي أو Emulator، ولا توجد تكاملات فعلية مع SMB أو FTP أو WebDAV أو Cloud.
 

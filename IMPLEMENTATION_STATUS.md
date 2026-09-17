@@ -3,9 +3,9 @@
 آخر تحقق فعلي للكود:
 
 - الفرع: `arena/01a09d45-t3code`
-- commit كود التطبيق المتحقق: `e82ee10140351951befd545516bc4245983c96bb`
-- CI نظيف للكود: `35278719183` — نجاح
-- run metadata للـAPK: `35279113727` — نجاح، بنفس كود التطبيق مع خطوة metadata مؤقتة أزيلت لاحقًا
+- commit كود التطبيق المتحقق: `7ee03dcfa98b00326bf77d18cf53265c17c95a69`
+- CI نظيف للكود: `35280160901` — نجاح
+- run metadata للـAPK: `35280589338` — نجاح، بنفس كود التطبيق مع خطوة metadata مؤقتة أزيلت لاحقًا
 - Gradle: `8.7`
 - JDK: `Temurin 17.0.20.1`
 - Android SDK: Platform 35 وBuild Tools 35.0.0
@@ -14,7 +14,7 @@
 - assembleDebug: ناجح
 - APK: `app/build/outputs/apk/debug/app-debug.apk`
 - حجم APK: `24,018,899` بايت
-- SHA-256: `9a463bea5f3e212370439aeebb8cd0f63c008d86715551a8e42556045aaeffd9`
+- SHA-256: `4002cedbde51987d005a2e1597c2139dc70907b03b94b0e596f57363566c73ae`
 
 ## معنى الحالات
 

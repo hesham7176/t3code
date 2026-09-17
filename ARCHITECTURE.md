@@ -37,4 +37,4 @@
 
 ## التحقق
 
-التفاصيل في `IMPLEMENTATION_STATUS.md` و`TESTING.md`. آخر تحقق نظيف مؤكد هو run `35278719183`، وAPK metadata في run `35279113727`.
+التفاصيل في `IMPLEMENTATION_STATUS.md` و`TESTING.md`. آخر تحقق نظيف مؤكد هو run `35280160901`، وAPK metadata في run `35280589338`.

@@ -24,13 +24,13 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ## التحقق المؤكد
 
-تم تشغيل الأوامر منفصلة في CI run `35278719183` على كود التطبيق `e82ee10140351951befd545516bc4245983c96bb`:
+تم تشغيل الأوامر منفصلة في CI run `35280160901` على كود التطبيق `7ee03dcfa98b00326bf77d18cf53265c17c95a69`:
 
 - Unit tests: PASS، وعددها 29.
 - Lint: PASS.
 - assembleDebug: PASS.
 
-تم التقاط metadata للـAPK في run `35279113727` لنفس كود التطبيق. حجم APK `24,018,899` بايت وSHA-256 هو `9a463bea5f3e212370439aeebb8cd0f63c008d86715551a8e42556045aaeffd9`.
+تم التقاط metadata للـAPK في run `35280589338` لنفس كود التطبيق. حجم APK `24,018,899` بايت وSHA-256 هو `4002cedbde51987d005a2e1597c2139dc70907b03b94b0e596f57363566c73ae`.
 
 ## بيئة Arena المحلية
 
