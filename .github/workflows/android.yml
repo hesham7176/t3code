@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
@@ -81,6 +81,36 @@ jobs:
             assemble.log
             app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
+      - name: Publish temporary success report
+        if: steps.unit.outcome == 'success' && steps.lint.outcome == 'success' && steps.assemble.outcome == 'success' && github.event_name == 'push'
+        run: |
+          {
+            echo 'JDK:'
+            java -version 2>&1
+            echo 'Gradle:'
+            ./gradlew --version
+            echo 'Tests:'
+            python3 - <<'PY'
+          import glob
+          import xml.etree.ElementTree as ET
+          total = failures = errors = skipped = 0
+          for path in glob.glob('app/build/test-results/testDebugUnitTest/*.xml'):
+              root = ET.parse(path).getroot()
+              total += int(root.attrib.get('tests', 0))
+              failures += int(root.attrib.get('failures', 0))
+              errors += int(root.attrib.get('errors', 0))
+              skipped += int(root.attrib.get('skipped', 0))
+          print(f'total={total} failures={failures} errors={errors} skipped={skipped}')
+          PY
+            echo 'APK:'
+            find app/build/outputs/apk/debug -maxdepth 1 -type f -name '*.apk' -printf '%p %s bytes\n'
+            sha256sum app/build/outputs/apk/debug/*.apk
+          } > ci-success-report.txt
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add ci-success-report.txt
+          git commit -m "ci: publish temporary success report [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
       - name: Fail if verification failed
         if: steps.unit.outcome != 'success' || steps.lint.outcome != 'success' || steps.assemble.outcome != 'success'
         run: exit 1
