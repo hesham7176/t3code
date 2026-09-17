@@ -46,19 +46,18 @@ jobs:
           } >> "$GITHUB_PATH"
       - name: Unit tests
         id: unit
-        continue-on-error: true
         run: |
           set -o pipefail
           ./gradlew testDebugUnitTest --stacktrace --console=plain 2>&1 | tee unit-tests.log
       - name: Lint
         id: lint
-        continue-on-error: true
+        if: always()
         run: |
           set -o pipefail
           ./gradlew lintDebug --stacktrace --console=plain 2>&1 | tee lint.log
       - name: Assemble debug APK
         id: assemble
-        continue-on-error: true
+        if: always()
         run: |
           set -o pipefail
           ./gradlew assembleDebug --stacktrace --console=plain 2>&1 | tee assemble.log
