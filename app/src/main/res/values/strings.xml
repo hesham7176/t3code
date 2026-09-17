@@ -108,4 +108,13 @@
     <string name="storage_used_percent">%1$d%% used</string>
     <string name="files_count">%1$d files</string>
     <string name="version">Version %1$s</string>
+    <string name="folder">Folder</string>
+    <string name="volume">Volume</string>
+    <string name="brightness">Brightness</string>
+    <string name="retry">Retry</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="deleted">Deleted</string>
+    <string name="delete_permanently">Delete permanently</string>
+    <string name="confirm_delete_permanent">Storage Access Framework has no recycle bin. Deleting these items removes them permanently. Continue?</string>
 </resources>

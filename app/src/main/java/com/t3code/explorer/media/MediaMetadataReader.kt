@@ -1,5 +1,7 @@
 package com.t3code.explorer.media
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import java.io.File
 
@@ -20,6 +22,16 @@ class MediaMetadataReader {
                 retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE),
                 retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_MIMETYPE)
             )
+        }.getOrNull().also { retriever.release() }
+    }
+
+    /** Embedded cover art when the file carries one; null otherwise. Call off the main thread. */
+    fun artwork(file: File): Bitmap? {
+        if (!file.isFile) return null
+        val retriever = MediaMetadataRetriever()
+        return runCatching {
+            retriever.setDataSource(file.absolutePath)
+            retriever.embeddedPicture?.let { bytes -> BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
         }.getOrNull().also { retriever.release() }
     }
 }

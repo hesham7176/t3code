@@ -1,33 +1,37 @@
 package com.t3code.explorer.media
 
-import android.app.PendingIntent
-import android.content.Intent
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import com.t3code.explorer.MainActivity
+import com.t3code.explorer.ExplorerApplication
 
+/**
+ * Foreground service that publishes the session for the shared player.
+ *
+ * Media3 turns the session into a notification with play/pause/next/previous controls, which is what
+ * keeps audio playing (and controllable from the lock screen) while the UI is in the background.
+ */
 class ExplorerPlaybackService : MediaSessionService() {
-    private var mediaSession: MediaSession? = null
-    private var player: ExoPlayer? = null
+    private var session: MediaSession? = null
 
     override fun onCreate() {
         super.onCreate()
-        val launchIntent = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        player = ExoPlayer.Builder(this).setAudioAttributes(AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).setUsage(C.USAGE_MEDIA).build(), true).build()
-        mediaSession = MediaSession.Builder(this, player!!).setSessionActivity(launchIntent).build()
+        val application = application as ExplorerApplication
+        session = application.playbackSessionHost.attach(application.mediaEngine.exoPlayer)
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
+
+    override fun onTaskRemoved(rootIntent: android.content.Intent?) {
+        val engine = (application as? ExplorerApplication)?.mediaEngine
+        if (engine == null || !engine.isPlaying || !engine.backgroundPlaybackEnabled) {
+            stopSelf()
+        }
+        super.onTaskRemoved(rootIntent)
+    }
 
     override fun onDestroy() {
-        val localPlayer = player
-        mediaSession?.release()
-        localPlayer?.release()
-        mediaSession = null
-        player = null
+        (application as? ExplorerApplication)?.playbackSessionHost?.detach()
+        session = null
         super.onDestroy()
     }
 }

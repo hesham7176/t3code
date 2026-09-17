@@ -24,6 +24,16 @@ class PlaybackPositionStore(context: Context) {
         file.outputStream().use { properties.store(it, "Media playback positions") }
     }
 
+    /** Drops positions that are at the very start or the very end of a media item. */
+    suspend fun trim(path: String, durationMs: Long) = withContext(Dispatchers.IO) {
+        val current = load().getProperty(path)?.toLongOrNull() ?: return@withContext
+        if (current <= 1_000L || (durationMs > 0 && current >= durationMs - 1_000L)) {
+            val properties = load()
+            properties.remove(path)
+            file.outputStream().use { properties.store(it, "Media playback positions") }
+        }
+    }
+
     private fun load(): Properties = Properties().also { properties ->
         if (file.exists()) {
             file.inputStream().use { properties.load(it) }
@@ -31,8 +41,14 @@ class PlaybackPositionStore(context: Context) {
     }
 }
 
+/**
+ * Keeps the shared player alive while it is playing in the background and only releases it once the
+ * activity is really gone.
+ */
 class MediaLifecycleObserver(private val engine: MediaEngine) : DefaultLifecycleObserver {
     override fun onDestroy(owner: LifecycleOwner) {
-        if (owner !is Activity || !owner.isChangingConfigurations) engine.release()
+        if (owner is Activity && owner.isChangingConfigurations) return
+        if (engine.isPlaying && engine.backgroundPlaybackEnabled) return
+        engine.release()
     }
 }

@@ -1,9 +1,13 @@
 package com.t3code.explorer.ui
 
+import android.Manifest.permission.POST_NOTIFICATIONS
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
@@ -54,6 +58,23 @@ fun ExplorerApp(viewModel: ExplorerViewModel) {
     var mediaIsVideo by rememberSaveable { mutableStateOf(false) }
     var textPath by rememberSaveable { mutableStateOf("") }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
+    val notificationLauncher = rememberLauncherForActivityResult(RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) notificationLauncher.launch(POST_NOTIFICATIONS)
+    }
+
+    BackHandler(enabled = destination != Destination.HOME) {
+        destination = when (destination) {
+            Destination.HOME -> Destination.HOME
+            Destination.BROWSE -> {
+                if (viewModel.navigateUp()) Destination.BROWSE else Destination.HOME
+            }
+            Destination.SEARCH -> Destination.BROWSE
+            Destination.MEDIA, Destination.TEXT_EDITOR -> Destination.BROWSE
+            Destination.SETTINGS -> Destination.HOME
+            Destination.ANALYZER, Destination.RECYCLE_BIN, Destination.APP_MANAGER -> Destination.SETTINGS
+        }
+    }
     val openBrowser: () -> Unit = {
         val permissions = PermissionController.sharedStoragePermissions()
         if (permissions.any { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }) permissionLauncher.launch(permissions)
@@ -110,7 +131,7 @@ fun ExplorerApp(viewModel: ExplorerViewModel) {
                 Destination.RECYCLE_BIN -> RecycleBinScreen(state, padding, viewModel)
                 Destination.APP_MANAGER -> AppManagerScreen(padding)
                 Destination.TEXT_EDITOR -> TextEditorScreen(textPath, padding, onBack = { destination = Destination.BROWSE })
-                Destination.MEDIA -> MediaScreen(state, mediaPath, mediaIsVideo, mediaMimeType, onBack = { destination = Destination.BROWSE })
+                Destination.MEDIA -> MediaScreen(state, mediaPath, mediaIsVideo, mediaMimeType, viewModel, onBack = { destination = Destination.BROWSE })
             }
         }
     }

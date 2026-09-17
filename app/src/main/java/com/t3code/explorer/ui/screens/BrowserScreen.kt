@@ -109,7 +109,7 @@ fun BrowserScreen(
         TopAppBar(
             title = { Text(if (state.selected.isNotEmpty()) "${state.selected.size}" else stringResource(R.string.file_manager)) },
             navigationIcon = {
-                IconButton(onClick = viewModel::navigateUp) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
+                IconButton(onClick = { viewModel.navigateUp() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
             },
             actions = {
                 if (state.selected.isNotEmpty()) {
@@ -138,7 +138,12 @@ fun BrowserScreen(
             LinearProgressIndicator({ operation.percent / 100f }, Modifier.fillMaxWidth())
         }
         if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        if (state.items.isEmpty() && !state.isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.empty_folder), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        if (state.error != null && state.items.isEmpty() && !state.isLoading) {
+            Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Text(state.error.orEmpty(), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 24.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                TextButton(onClick = { viewModel.loadDirectory() }) { Text(stringResource(R.string.retry)) }
+            }
+        } else if (state.items.isEmpty() && !state.isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.empty_folder), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         else if (state.preferences.viewMode.isGrid) {
             val cells = when (state.preferences.viewMode) { ViewMode.SMALL_GRID -> 5; ViewMode.LARGE_GRID -> 2; else -> 3 }
             LazyVerticalGrid(GridCells.Fixed(cells), Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -157,7 +162,16 @@ fun BrowserScreen(
 
     if (showCreate) CreateDialog(onDismiss = { showCreate = false }, onFolder = { name -> showCreate = false; viewModel.createFolder(name) }, onFile = { name -> showCreate = false; viewModel.createFile(name) })
     if (showTransfer) TransferDialog(state.currentPath, transferMove, onDismiss = { showTransfer = false }, onSubmit = { destination -> showTransfer = false; viewModel.transferSelected(destination, transferMove) })
-    if (showDelete) AlertDialog(onDismissRequest = { showDelete = false }, title = { Text(stringResource(R.string.delete)) }, text = { Text(stringResource(R.string.confirm_delete)) }, confirmButton = { TextButton(onClick = { showDelete = false; viewModel.deleteSelected() }) { Text(stringResource(R.string.delete)) } }, dismissButton = { TextButton(onClick = { showDelete = false }) { Text(stringResource(R.string.cancel)) } })
+    if (showDelete) {
+        val permanent = state.currentPath.startsWith("content:")
+        ConfirmDialog(
+            title = stringResource(if (permanent) R.string.delete_permanently else R.string.delete),
+            message = stringResource(if (permanent) R.string.confirm_delete_permanent else R.string.confirm_delete),
+            confirmLabel = stringResource(R.string.delete),
+            onDismiss = { showDelete = false },
+            onConfirm = { showDelete = false; viewModel.deleteSelected(permanent) }
+        )
+    }
     renameTarget?.let { target -> NameDialog(stringResource(R.string.rename), target.name, { renameTarget = null }, { value -> renameTarget = null; viewModel.rename(target, value) }) }
     propertiesTarget?.let { target -> PropertiesDialog(target, { propertiesTarget = null }) }
     if (showSort) SortDialog(state, { showSort = false }, viewModel)
@@ -261,23 +275,6 @@ private fun CreateDialog(onDismiss: () -> Unit, onFolder: (String) -> Unit, onFi
             }
         } }
     }
-}
-
-@Composable
-private fun NameDialog(title: String, initial: String, onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
-    var value by remember { mutableStateOf(initial) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(title) }, text = { OutlinedTextField(value, { value = it }, singleLine = true) }, confirmButton = { TextButton({ if (value.isNotBlank()) onSubmit(value) }) { Text(stringResource(R.string.save)) } }, dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } })
-}
-
-@Composable
-private fun PropertiesDialog(item: FileItem, onDismiss: () -> Unit) {
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.properties)) }, text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(item.name, style = MaterialTheme.typography.titleMedium)
-        Text(item.path, style = MaterialTheme.typography.bodySmall)
-        Text(item.mimeType)
-        Text(item.size.readableFileSize())
-        Text(formatDate(item.modifiedAt))
-    } }, confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.close)) } })
 }
 
 @Composable

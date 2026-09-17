@@ -43,6 +43,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(currentPath = primary, locations = app.storage.locations()) }
         viewModelScope.launch {
             app.preferences.preferences.collect { preferences ->
+                app.mediaEngine.backgroundPlaybackEnabled = preferences.backgroundPlayback
                 _uiState.update { it.copy(preferences = preferences) }
                 if (preferences.language != "system" && AppCompatDelegate.getApplicationLocales().toLanguageTags() != preferences.language) AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(preferences.language))
                 loadDirectory(_uiState.value.currentPath)
@@ -86,13 +87,17 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun navigateUp() {
+    /** Returns true when a parent directory was opened, false when the current path is already a root. */
+    fun navigateUp(): Boolean {
         val currentPath = _uiState.value.currentPath
         if (currentPath.startsWith("content:")) {
-            safParents[currentPath]?.let { loadDirectory(it) }
-        } else {
-            java.io.File(currentPath).parentFile?.let { loadDirectory(it.absolutePath) }
+            val parent = safParents[currentPath] ?: return false
+            loadDirectory(parent)
+            return true
         }
+        val parent = java.io.File(currentPath).parentFile ?: return false
+        loadDirectory(parent.absolutePath)
+        return true
     }
 
     fun toggleSelection(item: FileItem) = _uiState.update {
@@ -109,7 +114,7 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
     fun setShowHidden(value: Boolean) { viewModelScope.launch { app.preferences.setShowHidden(value) } }
     fun setFolderCovers(value: Boolean) { viewModelScope.launch { app.preferences.setFolderCovers(value) } }
     fun setResumePlayback(value: Boolean) { viewModelScope.launch { app.preferences.setResumePlayback(value) } }
-    fun setBackgroundPlayback(value: Boolean) { viewModelScope.launch { app.preferences.setBackgroundPlayback(value) } }
+    fun setBackgroundPlayback(value: Boolean) { viewModelScope.launch { app.preferences.setBackgroundPlayback(value); app.mediaEngine.backgroundPlaybackEnabled = value } }
     fun setTheme(value: String) { viewModelScope.launch { app.preferences.setTheme(value) } }
     fun setLanguage(value: String) {
         viewModelScope.launch { app.preferences.setLanguage(value) }
@@ -170,11 +175,40 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         loadDirectory()
     }
 
-    fun deleteSelected() = viewModelScope.launch {
-        if (isSafPath()) { showMessage(R.string.saf_operation_unavailable); return@launch }
+    /**
+     * Deletes the selection.
+     *
+     * Local items go to the recycle bin. SAF documents have no trash, so they are only removed when
+     * the UI passes [permanent] after an explicit confirmation; without it the call is refused.
+     */
+    fun deleteSelected(permanent: Boolean = false) = viewModelScope.launch {
         val items = _uiState.value.items.filter { it.path in _uiState.value.selected }
-        if (items.any { it.path.startsWith("content:") }) { showMessage(R.string.saf_operation_unavailable); return@launch }
-        app.operations.deleteToRecycleBin(items).fold({ showMessage(R.string.moved_to_recycle_bin) }, ::showError)
+        if (items.isEmpty()) return@launch
+        if (isSafPath() || items.any { it.path.startsWith("content:") }) {
+            if (!permanent) {
+                showMessage(R.string.saf_operation_unavailable)
+                return@launch
+            }
+            val uris = items.mapNotNull { it.uri ?: Uri.parse(it.path).takeIf { uri -> uri.scheme == "content" } }
+            if (uris.size != items.size) {
+                showMessage(R.string.saf_operation_unavailable)
+                return@launch
+            }
+            app.saf.delete(uris).fold({ showMessage(R.string.deleted) }, ::showError)
+        } else {
+            app.operations.deleteToRecycleBin(items).fold({ showMessage(R.string.moved_to_recycle_bin) }, ::showError)
+        }
+        clearSelection()
+        loadDirectory()
+    }
+
+    /** Moves a single local item to the recycle bin; used by the image viewer. */
+    fun deleteItem(item: FileItem) = viewModelScope.launch {
+        if (item.path.startsWith("content:")) {
+            showMessage(R.string.saf_operation_unavailable)
+            return@launch
+        }
+        app.operations.deleteToRecycleBin(listOf(item)).fold({ showMessage(R.string.moved_to_recycle_bin) }, ::showError)
         clearSelection()
         loadDirectory()
     }

@@ -108,4 +108,13 @@
     <string name="storage_used_percent">%1$d%% مستخدم</string>
     <string name="files_count">%1$d ملف</string>
     <string name="version">الإصدار %1$s</string>
+    <string name="folder">مجلد</string>
+    <string name="volume">الصوت</string>
+    <string name="brightness">السطوع</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="play">تشغيل</string>
+    <string name="pause">إيقاف مؤقت</string>
+    <string name="deleted">تم الحذف</string>
+    <string name="delete_permanently">حذف نهائي</string>
+    <string name="confirm_delete_permanent">لا توجد سلة مهملات في وصول التخزين (SAF). حذف هذه العناصر يزيلها نهائيًا. هل تريد المتابعة؟</string>
 </resources>

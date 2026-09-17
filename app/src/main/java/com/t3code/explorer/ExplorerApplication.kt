@@ -9,6 +9,7 @@ import com.t3code.explorer.data.preferences.PreferencesRepository
 import com.t3code.explorer.data.storage.StorageRepository
 import com.t3code.explorer.media.MediaEngine
 import com.t3code.explorer.media.PlaybackPositionStore
+import com.t3code.explorer.media.PlaybackSessionHost
 import com.t3code.explorer.media.ThumbnailProvider
 
 class ExplorerApplication : Application() {
@@ -21,4 +22,5 @@ class ExplorerApplication : Application() {
     val playbackPositions by lazy { PlaybackPositionStore(this) }
     val thumbnailProvider by lazy { ThumbnailProvider(this) }
     val mediaEngine by lazy { MediaEngine(this) }
+    val playbackSessionHost by lazy { PlaybackSessionHost(this) }
 }
