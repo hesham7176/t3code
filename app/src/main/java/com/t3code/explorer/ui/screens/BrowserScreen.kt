@@ -143,13 +143,13 @@ fun BrowserScreen(
             val cells = when (state.preferences.viewMode) { ViewMode.SMALL_GRID -> 5; ViewMode.LARGE_GRID -> 2; else -> 3 }
             LazyVerticalGrid(GridCells.Fixed(cells), Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(state.items, key = { it.path }) { item ->
-                    FileGridCard(item, item.path in state.selected, onOpen = { if (item.isDirectory) viewModel.loadDirectory(item.path) else onOpenMedia(item) }, onSelect = { viewModel.toggleSelection(item) }, onRename = { renameTarget = item }, onDelete = { viewModel.toggleSelection(item); showDelete = true }, onShare = { viewModel.share(item) }, onProperties = { propertiesTarget = item })
+                    FileGridCard(item, item.path in state.selected, onOpen = { if (item.isDirectory) viewModel.loadDirectory(item.path) else onOpenMedia(item) }, onSelect = { viewModel.toggleSelection(item) }, onRename = { renameTarget = item }, onDelete = { viewModel.selectOnly(item); showDelete = true }, onShare = { viewModel.share(item) }, onProperties = { propertiesTarget = item })
                 }
             }
         } else {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 items(state.items, key = { it.path }) { item ->
-                    FileListRow(item, item.path in state.selected, state.preferences.viewMode.detailLines > 0, onOpen = { if (item.isDirectory) viewModel.loadDirectory(item.path) else onOpenMedia(item) }, onSelect = { viewModel.toggleSelection(item) }, onRename = { renameTarget = item }, onDelete = { viewModel.toggleSelection(item); showDelete = true }, onShare = { viewModel.share(item) }, onProperties = { propertiesTarget = item })
+                    FileListRow(item, item.path in state.selected, state.preferences.viewMode.detailLines > 0, onOpen = { if (item.isDirectory) viewModel.loadDirectory(item.path) else onOpenMedia(item) }, onSelect = { viewModel.toggleSelection(item) }, onRename = { renameTarget = item }, onDelete = { viewModel.selectOnly(item); showDelete = true }, onShare = { viewModel.share(item) }, onProperties = { propertiesTarget = item })
                 }
             }
         }

@@ -99,6 +99,8 @@ class ExplorerViewModel(application: Application) : AndroidViewModel(application
         it.copy(selected = if (item.path in it.selected) it.selected - item.path else it.selected + item.path)
     }
 
+    fun selectOnly(item: FileItem) = _uiState.update { it.copy(selected = setOf(item.path)) }
+
     fun selectAll() = _uiState.update { state -> state.copy(selected = state.items.map { it.path }.toSet()) }
     fun clearSelection() = _uiState.update { it.copy(selected = emptySet()) }
 
