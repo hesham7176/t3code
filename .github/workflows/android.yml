@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -81,23 +81,6 @@ jobs:
             assemble.log
             app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
-      - name: Publish temporary failure report
-        if: always() && (steps.unit.outcome != 'success' || steps.lint.outcome != 'success' || steps.assemble.outcome != 'success') && github.event_name == 'push'
-        run: |
-          {
-            echo "unit=${{ steps.unit.outcome }}"
-            echo "lint=${{ steps.lint.outcome }}"
-            echo "assemble=${{ steps.assemble.outcome }}"
-            for file in unit-tests.log lint.log assemble.log; do
-              echo "--- $file ---"
-              if [ -f "$file" ]; then tail -240 "$file"; else echo "missing"; fi
-            done
-          } > ci-failure-report.txt
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add ci-failure-report.txt
-          git commit -m "ci: publish temporary failure report [skip ci]"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
       - name: Fail if verification failed
         if: steps.unit.outcome != 'success' || steps.lint.outcome != 'success' || steps.assemble.outcome != 'success'
         run: exit 1

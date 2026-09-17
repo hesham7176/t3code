@@ -46,6 +46,7 @@ class TextDocumentRepository(private val context: Context? = null) {
             } finally {
                 temporary.delete()
             }
+            Unit
         }
     }
 

@@ -40,7 +40,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         try {
             connection.connect()
             val response = connection.responseCode
-            if (response == HttpURLConnection.HTTP_REQUESTED_RANGE_NOT_SATISFIABLE && offset > 0) {
+            if (response == RANGE_NOT_SATISFIABLE && offset > 0) {
                 val total = connection.getHeaderField("Content-Range")?.substringAfter("*/")?.toLongOrNull()
                 when {
                     total != null && offset == total -> {
@@ -83,6 +83,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
     }
 
     companion object {
+        private const val RANGE_NOT_SATISFIABLE = 416
         const val KEY_URL = "url"
         const val KEY_DESTINATION = "destination"
         const val KEY_COMPLETED = "completed"
